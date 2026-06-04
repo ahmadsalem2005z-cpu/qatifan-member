@@ -640,8 +640,110 @@ function AnnouncementsScreen() {
   );
 }
 
+// 0. Login Screen
+function LoginScreen({ onLogin }) {
+  const [step, setStep] = useState(1);
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleRequestOTP = async () => {
+    if (!phone || phone.length < 9) {
+      setError("الرجاء إدخال رقم جوال صحيح"); return;
+    }
+    setLoading(true); setError("");
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+      const res = await fetch(`${apiUrl}/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: phone })
+      });
+      const data = await res.json();
+      if (res.ok) { 
+        setStep(2); 
+      } else { 
+        setError(data.error || "حدث خطأ غير متوقع"); 
+      }
+    } catch (err) { 
+      setError("تعذر الاتصال بالسيرفر. تأكد من الإنترنت."); 
+    }
+    setLoading(false);
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length < 4) { setError("الرجاء إدخال الرمز بشكل صحيح"); return; }
+    setLoading(true); setError("");
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+      const res = await fetch(`${apiUrl}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: phone, otp })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        onLogin(data.token, data.member || {});
+      } else { 
+        setError(data.error || "رمز التحقق غير صحيح"); 
+      }
+    } catch (err) { 
+      setError("تعذر الاتصال بالسيرفر."); 
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="anim" style={{
+      minHeight:"100vh", background:C.bg, display:"flex", 
+      alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"
+    }}>
+      <style>{G}</style>
+      <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
+        <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
+        <h2 style={{color:C.text, marginBottom:8, fontSize:22}}>صندوق عائلة قطيفان</h2>
+        <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>
+          {step === 1 
+            ? "أهلاً بك، الرجاء إدخال رقم جوالك المسجل لدى الإدارة لتسجيل الدخول." 
+            : "تم إرسال رمز التحقق إلى جوالك، الرجاء إدخاله أدناه."}
+        </p>
+
+        {error && <div style={{color:C.red, fontSize:12, marginBottom:16, background:C.redSoft, padding:8, borderRadius:8}}>{error}</div>}
+
+        {step === 1 ? (
+          <>
+            <Input type="tel" placeholder="مثال: 0501234567" value={phone} onChange={setPhone} />
+            <Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}} variant="primary">
+              {loading ? "⏳ جاري الإرسال..." : "إرسال رمز التحقق"}
+            </Btn>
+          </>
+        ) : (
+          <>
+            <Input type="number" placeholder="1234" value={otp} onChange={setOtp} />
+            <Btn onClick={handleVerifyOTP} style={{width:"100%", marginTop:10}} variant="green">
+              {loading ? "⏳ جاري التحقق..." : "دخول"}
+            </Btn>
+            <button onClick={()=>{setStep(1); setError(""); setOtp("");}} style={{
+              background:"none", border:"none", color:C.muted, fontSize:12, 
+              marginTop:16, cursor:"pointer", fontFamily:"'Tajawal',sans-serif", textDecoration:"underline"
+            }}>
+              تعديل رقم الجوال
+            </button>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────
 // ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
+  // --- حالة تسجيل الدخول ---
+  const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
+  const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
+  
   const [screen, setScreen] = useState("fund");
 
   const NAV = [
@@ -653,6 +755,28 @@ export default function App() {
 
   const SCREENS = {fund:<FundScreen/>, account:<AccountScreen/>, request:<RequestScreen/>, notif:<AnnouncementsScreen/>};
 
+  // دالة تُنفذ عند نجاح تسجيل الدخول
+  const handleLoginSuccess = (newToken, memberData) => {
+    localStorage.setItem("qatifan_token", newToken);
+    localStorage.setItem("qatifan_member", JSON.stringify(memberData));
+    setToken(newToken);
+    setMember(memberData);
+  };
+
+  // دالة تسجيل الخروج (مخفية، يمكنك ربطها بزر لاحقاً)
+  const handleLogout = () => {
+    localStorage.removeItem("qatifan_token");
+    localStorage.removeItem("qatifan_member");
+    setToken(null);
+    setMember(null);
+  };
+
+  // إذا لم يكن العضو مسجلاً للدخول، اعرض شاشة الحماية فقط
+  if (!token) {
+    return <LoginScreen onLogin={handleLoginSuccess} />;
+  }
+
+  // إذا كان مسجلاً، اعرض التطبيق بالكامل
   return (
     <>
       <style>{G}</style>
@@ -674,19 +798,22 @@ export default function App() {
               background:C.accentSoft,border:`2px solid ${C.accent}`,
               display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,fontWeight:700,color:C.accent,
-            }}>عق</div>
+            }}>
+              {/* عرض أول حرفين من اسم العضو الحقيقي إذا توفر، وإلا "عق" */}
+              {member?.name ? member.name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
+            </div>
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:C.text}}>عبدالله محمد القطيفان</div>
-              <div style={{fontSize:10,color:C.muted}}>عضو منذ يناير 2024</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{member?.name || "عبدالله محمد القطيفان"}</div>
+              <div style={{fontSize:10,color:C.muted}}>عضو نشط</div>
             </div>
           </div>
-          <div style={{
-            background:C.goldSoft,border:`1px solid ${C.gold}40`,
-            borderRadius:20,padding:"3px 10px",
-            fontSize:11,color:C.gold,fontWeight:600,
-          }} className="blink">
-            ⚠️ ذمة: 300 ر.س
-          </div>
+          <button onClick={handleLogout} style={{
+            background:"none",border:`1px solid ${C.border}`,
+            borderRadius:8,padding:"4px 8px", cursor:"pointer",
+            fontSize:11,color:C.muted,fontWeight:600,fontFamily:"'Tajawal',sans-serif"
+          }}>
+            خروج
+          </button>
         </header>
 
         {/* Main content */}
