@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 // ── Global styles ─────────────────────────────────────────────────────────
 const G = `
@@ -227,8 +227,50 @@ function FundScreen() {
   );
 }
 
+
 // 2. My Account
 function AccountScreen() {
+  // --- حالات رفع الإيصال ---
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // --- دالة رفع الملف للسيرفر ---
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    try {
+      // الاتصال بسيرفر الباك-إند الخاص بك
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/upload-receipt`, {
+        method: 'POST',
+        // headers: { Authorization: `Bearer ${YOUR_TOKEN}` }, // تُضاف لاحقاً عند تفعيل التوكن الحقيقي
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUploadSuccess(true);
+        console.log("تم الرفع بنجاح! الرابط:", data.url);
+        // هنا مستقبلاً سنرسل هذا الرابط كجزء من عملية السداد (paySubscription)
+        setTimeout(() => setUploadSuccess(false), 3500);
+      } else {
+        alert("حدث خطأ أثناء الرفع: " + data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
@@ -309,10 +351,35 @@ function AccountScreen() {
           </div>
         </div>
       </div>
+
+      {/* --- قسم رفع الإيصال الجديد --- */}
+      <Card>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
+        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
+          بعد إتمام التحويل البنكي، قم بإرفاق صورة الإيصال هنا لمراجعتها واعتمادها من قبل الإدارة.
+        </p>
+        
+        {/* حقل اختيار الملف (مخفي) */}
+        <input 
+          type="file" 
+          accept="image/*,.pdf" 
+          style={{display: 'none'}} 
+          ref={fileInputRef} 
+          onChange={handleUpload} 
+        />
+        
+        <Btn 
+          onClick={() => fileInputRef.current.click()} 
+          style={{width:"100%"}} 
+          variant={uploadSuccess ? "green" : "primary"}
+        >
+          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
+        </Btn>
+      </Card>
+
     </div>
   );
 }
-
 // 3. Request
 function RequestScreen() {
   const [type, setType]       = useState("loan");
