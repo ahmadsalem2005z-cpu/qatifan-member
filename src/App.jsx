@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // ── Global styles ─────────────────────────────────────────────────────────
 const G = `
@@ -177,22 +177,58 @@ const ANNOUNCEMENTS = [
 // ── SCREENS ───────────────────────────────────────────────────────────────
 
 // 1. Fund Summary
-function FundScreen() {
-  const paidPct = Math.round((19/24)*100);
+function FundScreen({ token }) {
+  const [summary, setSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+        // سنقوم بإنشاء هذا المسار في الباك-إند في الخطوة القادمة
+        const res = await fetch(`${apiUrl}/api/fund/summary`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSummary(data);
+        }
+      } catch (err) {
+        console.error("خطأ في جلب ملخص الصندوق:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSummary();
+  }, [token]);
+
+  if (isLoading) {
+    return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
+  }
+
+  // استخدام البيانات الحقيقية من السيرفر (أو الأرقام الافتراضية مؤقتاً)
+  const balance = summary?.balance ?? 47850;
+  const activeMembersCount = summary?.activeMembers ?? 28;
+  const totalExpenses = summary?.totalExpenses ?? 27050;
+  const paidPct = summary?.paidPct ?? 79;
+  const paidCount = summary?.paidCount ?? 19;
+  const expectedCount = summary?.expectedCount ?? 24;
+  const expensesList = summary?.recentExpenses || FUND_EXPENSES;
+
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value="47,850 ر.س" sub="محدّث اليوم" color={C.green}/>
-        <KPI label="إجمالي الأعضاء" value="28" sub="عضو نشط" color={C.accent}/>
-        <KPI label="المصروف هذا العام" value="27,050 ر.س" sub="على 14 حالة" color={C.purple}/>
+        <KPI label="رصيد الصندوق" value={`${balance.toLocaleString("ar-SA")} ر.س`} sub="محدّث اليوم" color={C.green}/>
+        <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
+        <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("ar-SA")} ر.س`} sub="على 14 حالة" color={C.purple}/>
       </div>
 
       {/* Compliance */}
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — يونيو 2025</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>19 من 24 عضواً سدّدوا هذا الشهر</div>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — الشهر الحالي</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} عضواً سدّدوا هذا الشهر</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -204,10 +240,10 @@ function FundScreen() {
       {/* Recent expenses */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>آخر المصروفات</div>
-        {FUND_EXPENSES.map((e,i)=>(
+        {expensesList.map((e,i)=>(
           <div key={i} style={{
             display:"flex",alignItems:"center",gap:12,
-            padding:"10px 0",borderBottom: i<FUND_EXPENSES.length-1?`1px solid ${C.border}`:"none",
+            padding:"10px 0",borderBottom: i<expensesList.length-1?`1px solid ${C.border}`:"none",
           }}>
             <span style={{fontSize:20,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",
               background:e.cat==="wedding"?C.purpleSoft:e.cat==="condolence"?C.surf2:C.goldSoft,
@@ -229,154 +265,181 @@ function FundScreen() {
 
 
 // 2. My Account
-function AccountScreen() {
+function AccountScreen({ member, token }) {
+  const [accountData, setAccountData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   // --- حالات رفع الإيصال ---
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
+  // --- جلب البيانات الحقيقية من السيرفر ---
+  useEffect(() => {
+    const fetchAccountData = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+        const res = await fetch(`${apiUrl}/api/member/account`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setAccountData(data);
+        }
+      } catch (err) {
+        console.error("خطأ في جلب البيانات:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAccountData();
+  }, [token]);
+
   // --- دالة رفع الملف للسيرفر ---
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setIsUploading(true);
     const formData = new FormData();
     formData.append('receipt', file);
 
     try {
-      // الاتصال بسيرفر الباك-إند الخاص بك
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
       const response = await fetch(`${apiUrl}/api/upload-receipt`, {
         method: 'POST',
-        // headers: { Authorization: `Bearer ${YOUR_TOKEN}` }, // تُضاف لاحقاً عند تفعيل التوكن الحقيقي
+        // سيتم إضافة التوكن لاحقاً لمسار الرفع كما فعلنا في الجلب
         body: formData,
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setUploadSuccess(true);
-        console.log("تم الرفع بنجاح! الرابط:", data.url);
-        // هنا مستقبلاً سنرسل هذا الرابط كجزء من عملية السداد (paySubscription)
         setTimeout(() => setUploadSuccess(false), 3500);
       } else {
         alert("حدث خطأ أثناء الرفع: " + data.error);
       }
     } catch (error) {
-      console.error(error);
       alert("تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.");
     } finally {
       setIsUploading(false);
     }
   };
 
+  // شاشة تحميل مؤقتة ريثما تصل البيانات
+  if (isLoading) {
+    return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
+  }
+
+  // الحسابات والبيانات
+  const activeMember = accountData || member;
+  const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
+  const lateMonths = debt > 0 ? Math.floor(debt / 150) : 0;
+  
+  // تصفية الدفعات (لأن LEFT JOIN قد يرجع null إذا لم تكن هناك دفعات)
+  const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
+  
+  // أسماء الأشهر للترجمة
+  const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="إجمالي المسدَّد" value="600 ر.س" sub="4 أشهر" color={C.green}/>
-        <KPI label="الذمة المستحقة" value="300 ر.س" sub="شهران متأخران" color={C.gold}/>
+        <KPI label="إجمالي المسدَّد" value={`${subscriptions.filter(s => s.status === 'paid').length * 150} ر.س`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
+        <KPI 
+          label="الذمة المستحقة" 
+          value={`${debt} ر.س`} 
+          sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} 
+          color={debt > 0 ? C.gold : C.green}
+        />
         <KPI label="الاشتراك الشهري" value="150 ر.س" sub="ثابت" color={C.accent}/>
       </div>
 
-      {/* Month grid */}
+      {/* Month grid (متصل بقاعدة البيانات) */}
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>دفعات عام 2025</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:12}}>
-          {MONTHS_2025.map((m,i)=>(
-            <div key={i} style={{
-              borderRadius:10,padding:"8px 4px",textAlign:"center",
-              background: m.paid===true?C.greenSoft: m.paid===false?C.goldSoft: C.surf2,
-              border:`1px solid ${m.paid===true?`${C.green}40`: m.paid===false?`${C.gold}40`: C.border}`,
-            }}>
-              <div style={{fontSize:9,marginBottom:3,
-                color: m.paid===true?"#86efac": m.paid===false?C.gold: C.muted}}>{m.m}</div>
-              <div style={{fontSize:8,fontWeight:600,
-                color: m.paid===true?C.green: m.paid===false?C.gold: C.muted}}>
-                {m.paid===true?"✓": m.paid===false?"متأخر":"قادم"}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:16,fontSize:11,color:C.muted}}>
-          {[["#10b981","مسدَّد"],["#f59e0b","متأخر"],["#334155","قادم"]].map(([c,l])=>(
-            <span key={l} style={{display:"flex",alignItems:"center",gap:4}}>
-              <span style={{width:10,height:10,borderRadius:3,background:c,display:"inline-block"}}/>
-              {l}
-            </span>
-          ))}
-        </div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>دفعاتك السابقة</div>
+        {subscriptions.length === 0 ? (
+          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد سجلات دفع حتى الآن.</div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:12}}>
+            {subscriptions.map((sub, i) => {
+              const isPaid = sub.status === 'paid';
+              return (
+                <div key={i} style={{
+                  borderRadius:10,padding:"8px 4px",textAlign:"center",
+                  background: isPaid ? C.greenSoft : C.goldSoft,
+                  border:`1px solid ${isPaid ? `${C.green}40` : `${C.gold}40`}`,
+                }}>
+                  <div style={{fontSize:9,marginBottom:3, color: isPaid ? "#86efac" : C.gold}}>
+                    {monthNames[sub.subscription_month]} {sub.subscription_year}
+                  </div>
+                  <div style={{fontSize:8,fontWeight:600, color: isPaid ? C.green : C.gold}}>
+                    {isPaid ? "✓" : "متأخر"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
-      {/* Statement */}
+      {/* Statement (متصل بقاعدة البيانات) */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي</div>
-        {[
-          {month:"يناير 2025", date:"سُدِّد 5 يناير",   paid:true},
-          {month:"فبراير 2025",date:"سُدِّد 3 فبراير",  paid:true},
-          {month:"مارس 2025",  date:"سُدِّد 2 مارس",    paid:true},
-          {month:"أبريل 2025", date:"سُدِّد 1 أبريل",   paid:true},
-          {month:"مايو 2025",  date:"استحق 1 مايو",     paid:false},
-          {month:"يونيو 2025", date:"استحق 1 يونيو",    paid:false},
-        ].map((r,i,arr)=>(
-          <div key={i} style={{
-            display:"flex",justifyContent:"space-between",alignItems:"center",
-            padding:"10px 0",borderBottom: i<arr.length-1?`1px solid ${C.border}`:"none",
-          }}>
-            <div>
-              <div style={{fontSize:12,fontWeight:600,color:C.text}}>{r.month}</div>
-              <div style={{fontSize:10,color:C.muted,marginTop:1}}>{r.date}</div>
+        {subscriptions.length === 0 ? (
+          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات لعرضها.</div>
+        ) : (
+          subscriptions.map((r, i, arr) => (
+            <div key={i} style={{
+              display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
+            }}>
+              <div>
+                <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
+                <div style={{fontSize:10,color:C.muted,marginTop:1}}>
+                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('ar-SA')}` : "غير مسدد"}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <Tag label={r.status === 'paid' ? "مسدَّد" : "متأخر"} color={r.status === 'paid' ? C.green : C.red}/>
+                <span style={{
+                  fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
+                  color: r.status === 'paid' ? C.green : C.red,
+                }}>{r.amount || 150} ر.س</span>
+              </div>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <Tag label={r.paid?"مسدَّد":"متأخر"} color={r.paid?C.green:C.red}/>
-              <span style={{
-                fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
-                color:r.paid?C.green:C.red,
-              }}>150 ر.س</span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </Card>
 
       {/* Debt alert */}
-      <div style={{
-        background:C.goldSoft,border:`1px solid ${C.gold}40`,
-        borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
-      }}>
-        <span style={{fontSize:20}}>⚠️</span>
-        <div>
-          <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة 300 ر.س</div>
-          <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-            يُرجى التحويل على IBAN: SA12 3456 7890 1234 5678 90 — بنك الراجحي
+      {debt > 0 && (
+        <div style={{
+          background:C.goldSoft,border:`1px solid ${C.gold}40`,
+          borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
+        }}>
+          <span style={{fontSize:20}}>⚠️</span>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {debt} ر.س</div>
+            <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
+              يُرجى التحويل على IBAN: SA12 3456 7890 1234 5678 90 — بنك الراجحي
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* --- قسم رفع الإيصال الجديد --- */}
+      {/* Upload Receipt */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
           بعد إتمام التحويل البنكي، قم بإرفاق صورة الإيصال هنا لمراجعتها واعتمادها من قبل الإدارة.
         </p>
-        
-        {/* حقل اختيار الملف (مخفي) */}
         <input 
-          type="file" 
-          accept="image/*,.pdf" 
-          style={{display: 'none'}} 
-          ref={fileInputRef} 
-          onChange={handleUpload} 
+          type="file" accept="image/*,.pdf" style={{display: 'none'}} 
+          ref={fileInputRef} onChange={handleUpload} 
         />
-        
-        <Btn 
-          onClick={() => fileInputRef.current.click()} 
-          style={{width:"100%"}} 
-          variant={uploadSuccess ? "green" : "primary"}
-        >
+        <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
         </Btn>
       </Card>
-
     </div>
   );
 }
@@ -738,7 +801,6 @@ function LoginScreen({ onLogin }) {
 }
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────
-// ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   // --- حالة تسجيل الدخول ---
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
@@ -753,7 +815,12 @@ export default function App() {
     {id:"notif",   label:"الإعلانات",      icon:"📣"},
   ];
 
-  const SCREENS = {fund:<FundScreen/>, account:<AccountScreen/>, request:<RequestScreen/>, notif:<AnnouncementsScreen/>};
+  const SCREENS = {
+    fund: <FundScreen token={token}/>, 
+    account: <AccountScreen member={member} token={token}/>, 
+    request: <RequestScreen/>, 
+    notif: <AnnouncementsScreen/>
+  };
 
   // دالة تُنفذ عند نجاح تسجيل الدخول
   const handleLoginSuccess = (newToken, memberData) => {
@@ -763,7 +830,7 @@ export default function App() {
     setMember(memberData);
   };
 
-  // دالة تسجيل الخروج (مخفية، يمكنك ربطها بزر لاحقاً)
+  // دالة تسجيل الخروج
   const handleLogout = () => {
     localStorage.removeItem("qatifan_token");
     localStorage.removeItem("qatifan_member");
@@ -799,11 +866,12 @@ export default function App() {
               display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,fontWeight:700,color:C.accent,
             }}>
-              {/* عرض أول حرفين من اسم العضو الحقيقي إذا توفر، وإلا "عق" */}
-              {member?.name ? member.name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
+              {/* التعديل: استخدام full_name لاقتطاع أول حرفين */}
+              {member?.full_name ? member.full_name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
             </div>
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{member?.name || "عبدالله محمد القطيفان"}</div>
+              {/* التعديل: عرض الاسم الكامل الصحيح من قاعدة البيانات */}
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{member?.full_name || "اسم العضو"}</div>
               <div style={{fontSize:10,color:C.muted}}>عضو نشط</div>
             </div>
           </div>
