@@ -135,9 +135,9 @@ function FundScreen({ token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value={`${balance.toLocaleString("ar-JO")} د.أ`} sub="محدّث اليوم" color={C.green}/>
+        <KPI label="رصيد الصندوق" value={`${balance.toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
         <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
-        <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("ar-JO")} د.أ`} sub="على 14 حالة" color={C.purple}/>
+        <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("en-US")} د.أ`} sub="على 14 حالة" color={C.purple}/>
       </div>
 
       <Card>
@@ -169,7 +169,7 @@ function FundScreen({ token }) {
             </div>
             <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple:e.cat==="condolence"?C.dim:C.gold,
               fontFamily:"'IBM Plex Mono',monospace"}}>
-              {e.amount.toLocaleString("ar-JO")} د.أ
+              {e.amount.toLocaleString("en-US")} د.أ
             </div>
           </div>
         ))}
@@ -251,10 +251,10 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="إجمالي المسدَّد" value={`${subscriptions.filter(s => s.status === 'paid').length * 150} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
+        <KPI label="إجمالي المسدَّد" value={`${(subscriptions.filter(s => s.status === 'paid').length * 150).toLocaleString("en-US")} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
         <KPI 
           label="الذمة المستحقة" 
-          value={`${debt} د.أ`} 
+          value={`${debt.toLocaleString("en-US")} د.أ`} 
           sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} 
           color={debt > 0 ? C.gold : C.green}
         />
@@ -301,7 +301,7 @@ function AccountScreen({ member, token }) {
               <div>
                 <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
                 <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('ar-JO')}` : "غير مسدد"}
+                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('ar-JO', { numberingSystem: 'latn' })}` : "غير مسدد"}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -390,7 +390,7 @@ function RequestScreen() {
           }}>
             <div style={{fontSize:12,color:C.muted,marginBottom:8}}>تفاصيل الطلب:</div>
             <div style={{fontSize:13,color:C.text}}>النوع: {TYPES.find(t=>t.id===type)?.label}</div>
-            <div style={{fontSize:13,color:C.text}}>المبلغ: {Number(amount).toLocaleString("ar-JO")} د.أ</div>
+            <div style={{fontSize:13,color:C.text}}>المبلغ: {Number(amount).toLocaleString("en-US")} د.أ</div>
             <div style={{fontSize:13,color:C.text,marginTop:4}}>السبب: {reason}</div>
           </div>
           <Btn onClick={()=>{setSubmitted(false);setAmount("");setReason("");setTiming("");}}>
@@ -472,10 +472,10 @@ function AnnouncementsScreen() {
   const [expanded, setExpanded] = useState(null);
 
   const ANNOUNCEMENTS = [
-    { id:1, title:"اجتماع الصندوق السنوي", body:"يُعقد الاجتماع السنوي لصندوق العائلة...", date:"1 يونيو 2026", type:"meeting" },
-    { id:2, title:"تكريم الأعضاء الملتزمين", body:"ستقوم إدارة الصندوق بتكريم الأعضاء...", date:"28 مايو 2026", type:"honor" },
-    { id:3, title:"تحديث قيمة الاشتراك", body:"تم الاتفاق في الاجتماع الأخير على رفع قيمة الاشتراك...", date:"15 يناير 2026", type:"update" },
-    { id:4, title:"وفاة الحاجة أم سالم القطيفان", body:"بقلوب مؤمنة نعلمكم بوفاة والدة الأخ أحمد...", date:"18 يونيو 2026", type:"condolence" },
+    { id:1, title:"اجتماع الصندوق السنوي", body:"يُعقد الاجتماع السنوي لصندوق العائلة...", date:"1 حزيران 2026", type:"meeting" },
+    { id:2, title:"تكريم الأعضاء الملتزمين", body:"ستقوم إدارة الصندوق بتكريم الأعضاء...", date:"28 أيار 2026", type:"honor" },
+    { id:3, title:"تحديث قيمة الاشتراك", body:"تم الاتفاق في الاجتماع الأخير على رفع قيمة الاشتراك...", date:"15 كانون الثاني 2026", type:"update" },
+    { id:4, title:"وفاة الحاجة أم سالم القطيفان", body:"بقلوب مؤمنة نعلمكم بوفاة والدة الأخ أحمد...", date:"18 حزيران 2026", type:"condolence" },
   ];
 
   const typeColors = {
@@ -600,7 +600,6 @@ function LoginScreen({ onLogin }) {
   const [error, setError] = useState("");
 
   const handleRequestOTP = async () => {
-    // التحقق من أن الرقم يتكون من 10 أرقام كما هو متبع في الأردن
     if (!phone || phone.length < 10) {
       setError("الرجاء إدخال رقم جوال صحيح مكون من 10 أرقام"); return;
     }
@@ -665,7 +664,6 @@ function LoginScreen({ onLogin }) {
 
         {step === 1 ? (
           <>
-            {/* التعديل هنا ليكون عاماً لجميع الشبكات الأردنية */}
             <Input type="tel" placeholder="مثال: 07XXXXXXXX" value={phone} onChange={setPhone} />
             <Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}} variant="primary">
               {loading ? "⏳ جاري الإرسال..." : "إرسال رمز التحقق"}
