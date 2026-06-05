@@ -135,9 +135,9 @@ function FundScreen({ token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value={`${balance.toLocaleString("ar-SA")} ر.س`} sub="محدّث اليوم" color={C.green}/>
+        <KPI label="رصيد الصندوق" value={`${balance.toLocaleString("ar-JO")} د.أ`} sub="محدّث اليوم" color={C.green}/>
         <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
-        <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("ar-SA")} ر.س`} sub="على 14 حالة" color={C.purple}/>
+        <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("ar-JO")} د.أ`} sub="على 14 حالة" color={C.purple}/>
       </div>
 
       <Card>
@@ -169,7 +169,7 @@ function FundScreen({ token }) {
             </div>
             <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple:e.cat==="condolence"?C.dim:C.gold,
               fontFamily:"'IBM Plex Mono',monospace"}}>
-              {e.amount.toLocaleString("ar-SA")} ر.س
+              {e.amount.toLocaleString("ar-JO")} د.أ
             </div>
           </div>
         ))}
@@ -251,14 +251,14 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="إجمالي المسدَّد" value={`${subscriptions.filter(s => s.status === 'paid').length * 150} ر.س`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
+        <KPI label="إجمالي المسدَّد" value={`${subscriptions.filter(s => s.status === 'paid').length * 150} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
         <KPI 
           label="الذمة المستحقة" 
-          value={`${debt} ر.س`} 
+          value={`${debt} د.أ`} 
           sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} 
           color={debt > 0 ? C.gold : C.green}
         />
-        <KPI label="الاشتراك الشهري" value="150 ر.س" sub="ثابت" color={C.accent}/>
+        <KPI label="الاشتراك الشهري" value="150 د.أ" sub="ثابت" color={C.accent}/>
       </div>
 
       <Card>
@@ -301,7 +301,7 @@ function AccountScreen({ member, token }) {
               <div>
                 <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
                 <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('ar-SA')}` : "غير مسدد"}
+                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('ar-JO')}` : "غير مسدد"}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -309,7 +309,7 @@ function AccountScreen({ member, token }) {
                 <span style={{
                   fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
                   color: r.status === 'paid' ? C.green : C.red,
-                }}>{r.amount || 150} ر.س</span>
+                }}>{r.amount || 150} د.أ</span>
               </div>
             </div>
           ))
@@ -323,9 +323,9 @@ function AccountScreen({ member, token }) {
         }}>
           <span style={{fontSize:20}}>⚠️</span>
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {debt} ر.س</div>
+            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {debt} د.أ</div>
             <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-              يُرجى التحويل على IBAN: SA12 3456 7890 1234 5678 90 — بنك الراجحي
+              يُرجى التحويل على IBAN: JO12 3456 7890 1234 5678 90 — البنك العربي
             </div>
           </div>
         </div>
@@ -359,8 +359,8 @@ function RequestScreen() {
   const [errors, setErrors]   = useState({});
 
   const TYPES = [
-    {id:"loan",      label:"سلفة",        icon:"💰"},
-    {id:"help",      label:"مساعدة",      icon:"🤝"},
+    {id:"loan",      label:"سلفة",       icon:"💰"},
+    {id:"help",      label:"مساعدة",     icon:"🤝"},
     {id:"condolence",label:"عزاء",        icon:"🕊️"},
     {id:"wedding",   label:"نقوط زواج",   icon:"💍"},
   ];
@@ -368,7 +368,7 @@ function RequestScreen() {
   const validate = () => {
     const e = {};
     if (!amount || isNaN(amount) || Number(amount)<50 || Number(amount)>5000)
-      e.amount = "أدخل مبلغاً بين 50 و5000 ريال";
+      e.amount = "أدخل مبلغاً بين 50 و5000 دينار";
     if (!reason.trim()) e.reason = "سبب الطلب مطلوب";
     setErrors(e);
     return Object.keys(e).length===0;
@@ -390,7 +390,7 @@ function RequestScreen() {
           }}>
             <div style={{fontSize:12,color:C.muted,marginBottom:8}}>تفاصيل الطلب:</div>
             <div style={{fontSize:13,color:C.text}}>النوع: {TYPES.find(t=>t.id===type)?.label}</div>
-            <div style={{fontSize:13,color:C.text}}>المبلغ: {Number(amount).toLocaleString("ar-SA")} ر.س</div>
+            <div style={{fontSize:13,color:C.text}}>المبلغ: {Number(amount).toLocaleString("ar-JO")} د.أ</div>
             <div style={{fontSize:13,color:C.text,marginTop:4}}>السبب: {reason}</div>
           </div>
           <Btn onClick={()=>{setSubmitted(false);setAmount("");setReason("");setTiming("");}}>
@@ -424,7 +424,7 @@ function RequestScreen() {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>تفاصيل الطلب</div>
-        <Input label="المبلغ المطلوب (ر.س) *" value={amount} onChange={setAmount} type="number" placeholder="500"/>
+        <Input label="المبلغ المطلوب (د.أ) *" value={amount} onChange={setAmount} type="number" placeholder="500"/>
         {errors.amount && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.amount}</div>}
         <Input label="سبب الطلب *" value={reason} onChange={setReason} placeholder="اشرح سبب طلبك باختصار..." textarea/>
         {errors.reason && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.reason}</div>}
@@ -452,7 +452,7 @@ function RequestScreen() {
           borderRadius:10,padding:"10px 14px",marginBottom:16,
           fontSize:12,color:C.dim,
         }}>
-          💡 الحد الأقصى للطلب: <strong style={{color:C.accent}}>4,785 ر.س</strong>
+          💡 الحد الأقصى للطلب: <strong style={{color:C.accent}}>4,785 د.أ</strong>
         </div>
 
         <Btn onClick={()=>{ if(validate()) setSubmitted(true); }} style={{width:"100%"}}>
@@ -522,7 +522,7 @@ function AnnouncementsScreen() {
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>🔔 تفضيلات التنبيه</div>
         {[
-          {label:"واتساب",icon:"📱",sub:"+966501234567", val:waEnabled, set:setWa, color:"#25D366"},
+          {label:"واتساب",icon:"📱",sub:"+9627XXXXXXXX", val:waEnabled, set:setWa, color:"#25D366"},
           {label:"البريد الإلكتروني",icon:"📧",sub:"a.qatifan@example.com", val:emailEnabled, set:setEmail, color:C.accent},
         ].map(ch=>(
           <div key={ch.label} style={{
@@ -553,7 +553,7 @@ function AnnouncementsScreen() {
         <div style={{marginTop:16,marginBottom:16}}>
           <div style={{fontSize:12,color:C.dim,marginBottom:10,fontWeight:500}}>تكرار التذكير عند وجود ذمم</div>
           <div style={{display:"flex",gap:8}}>
-            {[["weekly","أسبوعياً"],["biweekly","كل أسبوعين"],["monthly","شهرياً"]].map(([v,l])=>(
+            [["weekly","أسبوعياً"],["biweekly","كل أسبوعين"],["monthly","شهرياً"]].map(([v,l])=>(
               <div key={v} onClick={()=>setFreq(v)} style={{
                 flex:1,padding:"8px 4px",borderRadius:10,textAlign:"center",
                 cursor:"pointer",fontSize:11,fontWeight:600,
@@ -561,7 +561,7 @@ function AnnouncementsScreen() {
                 border:`1px solid ${freq===v?C.accent:C.border}`,
                 color: freq===v?C.accent:C.dim,
               }}>{l}</div>
-            ))}
+            ))
           </div>
         </div>
 
@@ -600,8 +600,9 @@ function LoginScreen({ onLogin }) {
   const [error, setError] = useState("");
 
   const handleRequestOTP = async () => {
-    if (!phone || phone.length < 9) {
-      setError("الرجاء إدخال رقم جوال صحيح"); return;
+    // التحقق من أن الرقم يتكون من 10 أرقام كما هو متبع في الأردن
+    if (!phone || phone.length < 10) {
+      setError("الرجاء إدخال رقم جوال صحيح مكون من 10 أرقام"); return;
     }
     setLoading(true); setError("");
     try {
@@ -664,7 +665,8 @@ function LoginScreen({ onLogin }) {
 
         {step === 1 ? (
           <>
-            <Input type="tel" placeholder="مثال: 0501234567" value={phone} onChange={setPhone} />
+            {/* التعديل هنا ليكون عاماً لجميع الشبكات الأردنية */}
+            <Input type="tel" placeholder="مثال: 07XXXXXXXX" value={phone} onChange={setPhone} />
             <Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}} variant="primary">
               {loading ? "⏳ جاري الإرسال..." : "إرسال رمز التحقق"}
             </Btn>
