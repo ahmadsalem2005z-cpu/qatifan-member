@@ -244,7 +244,7 @@ function AccountScreen({ member, token }) {
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
   const lateMonths = debt > 0 ? Math.floor(debt / 150) : 0;
-  
+ 
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
   const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
@@ -553,7 +553,7 @@ function AnnouncementsScreen() {
         <div style={{marginTop:16,marginBottom:16}}>
           <div style={{fontSize:12,color:C.dim,marginBottom:10,fontWeight:500}}>تكرار التذكير عند وجود ذمم</div>
           <div style={{display:"flex",gap:8}}>
-            [["weekly","أسبوعياً"],["biweekly","كل أسبوعين"],["monthly","شهرياً"]].map(([v,l])=>(
+            {[["weekly","أسبوعياً"],["biweekly","كل أسبوعين"],["monthly","شهرياً"]].map(([v,l])=>(
               <div key={v} onClick={()=>setFreq(v)} style={{
                 flex:1,padding:"8px 4px",borderRadius:10,textAlign:"center",
                 cursor:"pointer",fontSize:11,fontWeight:600,
@@ -561,7 +561,7 @@ function AnnouncementsScreen() {
                 border:`1px solid ${freq===v?C.accent:C.border}`,
                 color: freq===v?C.accent:C.dim,
               }}>{l}</div>
-            ))
+            ))}
           </div>
         </div>
 
@@ -692,7 +692,7 @@ function LoginScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
-  
+ 
   const [screen, setScreen] = useState("fund");
 
   const NAV = [
