@@ -149,7 +149,7 @@ function FundScreen({ token }) {
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
         <div style={{height:8,background:C.surf2,borderRadius:99}}>
-          <div style={{width:`${paidPct}%`,height:"100%",background:C.green,borderRadius:99}}/>
+          <div style={{width:`${Math.min(paidPct, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/>
         </div>
       </Card>
 
