@@ -48,7 +48,7 @@ function KPI({ label, value, sub, color=C.accent }) {
   );
 }
 
-function Btn({ children, variant="primary", onClick, small, style={} }) {
+function Btn({ children, variant="primary", onClick, small, disabled, style={} }) {
   const v = {
     primary:{background:C.accent,color:"#fff",border:"none"},
     ghost:{background:"transparent",color:C.dim,border:`1px solid ${C.border}`},
@@ -56,11 +56,12 @@ function Btn({ children, variant="primary", onClick, small, style={} }) {
     gold:{background:C.gold,color:"#000",border:"none"},
   };
   return (
-    <button onClick={onClick} style={{
-      ...v[variant], borderRadius:10, cursor:"pointer",
+    <button onClick={onClick} disabled={disabled} style={{
+      ...v[variant], borderRadius:10, cursor: disabled ? "not-allowed" : "pointer",
       fontFamily:"'Tajawal',sans-serif", fontWeight:600,
       padding: small?"6px 14px":"10px 20px",
-      fontSize: small?12:13, transition:"all .18s", ...style,
+      fontSize: small?12:13, transition:"all .18s", 
+      opacity: disabled ? 0.7 : 1, ...style,
     }}>{children}</button>
   );
 }
@@ -349,7 +350,7 @@ function AccountScreen({ member, token }) {
 }
 
 // 3. Request
-function RequestScreen() {
+function RequestScreen({ token }) {
   const [type, setType]       = useState("loan");
   const [amount, setAmount]   = useState("");
   const [reason, setReason]   = useState("");
@@ -357,6 +358,7 @@ function RequestScreen() {
   const [repay, setRepay]     = useState("3");
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors]   = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const TYPES = [
     {id:"loan",      label:"سلفة",       icon:"💰"},
@@ -372,6 +374,34 @@ function RequestScreen() {
     if (!reason.trim()) e.reason = "سبب الطلب مطلوب";
     setErrors(e);
     return Object.keys(e).length===0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setIsSubmitting(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+      const res = await fetch(`${apiUrl}/api/requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ type, amount, reason, timing, repay })
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const errorData = await res.json();
+        alert("حدث خطأ: " + (errorData.error || "تعذر إرسال الطلب"));
+      }
+    } catch (error) {
+      alert("تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -455,8 +485,8 @@ function RequestScreen() {
           💡 الحد الأقصى للطلب: <strong style={{color:C.accent}}>4,785 د.أ</strong>
         </div>
 
-        <Btn onClick={()=>{ if(validate()) setSubmitted(true); }} style={{width:"100%"}}>
-          📤 إرسال الطلب
+        <Btn onClick={handleSubmit} style={{width:"100%"}} disabled={isSubmitting}>
+          {isSubmitting ? "⏳ جاري الإرسال..." : "📤 إرسال الطلب"}
         </Btn>
       </Card>
     </div>
@@ -705,7 +735,7 @@ export default function App() {
   const SCREENS = {
     fund: <FundScreen token={token}/>, 
     account: <AccountScreen member={member} token={token}/>, 
-    request: <RequestScreen/>, 
+    request: <RequestScreen token={token}/>, 
     notif: <AnnouncementsScreen/>
   };
 
