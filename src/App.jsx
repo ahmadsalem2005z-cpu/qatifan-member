@@ -1,174 +1,83 @@
-// 2. My Account
-function AccountScreen({ member, token }) {
-  const [accountData, setAccountData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const fileInputRef = useRef(null);
+import { useState, useRef, useEffect } from "react";
 
-  // حالات لاختيار الشهر والسنة
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+// ── Global styles ─────────────────────────────────────────────────────────
+const G = `
+  @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{direction:rtl;font-family:'Tajawal',sans-serif;background:#0b0f1a;color:#e2e8f0}
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:#0b0f1a}
+  ::-webkit-scrollbar-thumb{background:#2a3a5c;border-radius:3px}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .anim{animation:fadeUp .3s ease both}
+`;
 
-  const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  const years = [2025, 2026, 2027];
+// ── Design tokens ─────────────────────────────────────────────────────────
+const C = {
+  bg:"#0b0f1a", surf:"#111827", surf2:"#1a2235",
+  border:"#1e2d44", accent:"#3b82f6", accentSoft:"#1d3557",
+  gold:"#f59e0b", goldSoft:"#2d2006",
+  green:"#10b981", greenSoft:"#052e16",
+  red:"#ef4444", redSoft:"#2d0a0a",
+  purple:"#a78bfa", purpleSoft:"#1e1040",
+  text:"#e2e8f0", muted:"#64748b", dim:"#94a3b8",
+};
 
-  useEffect(() => {
-    const fetchAccountData = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        const res = await fetch(`${apiUrl}/api/member/account`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok) setAccountData(data);
-      } catch (err) {
-        console.error("خطأ:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAccountData();
-  }, [token]);
+// ── Components ────────────────────────────────────────────────────────────
+function Card({ children, style={} }) {
+  return <div style={{background:C.surf, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px", ...style}}>{children}</div>;
+}
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setIsUploading(true);
-    
-    // إرسال الصورة + الشهر + السنة
-    const formData = new FormData();
-    formData.append('receipt', file);
-    formData.append('month', selectedMonth);
-    formData.append('year', selectedYear);
+function KPI({ label, value, sub, color=C.accent }) {
+  return (
+    <div style={{background:C.surf2, borderRadius:12, padding:"14px 16px", borderTop:`3px solid ${color}`}}>
+      <div style={{fontSize:11,color:C.muted,marginBottom:6}}>{label}</div>
+      <div style={{fontSize:22,fontWeight:700,color,fontFamily:"'IBM Plex Mono',monospace"}}>{value}</div>
+      {sub && <div style={{fontSize:11,color:C.dim,marginTop:4}}>{sub}</div>}
+    </div>
+  );
+}
 
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/upload-receipt`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData,
-      });
-      if (response.ok) {
-        setUploadSuccess(true);
-        setTimeout(() => setUploadSuccess(false), 3500);
-      } else {
-        alert("حدث خطأ أثناء الرفع");
-      }
-    } catch (error) {
-      alert("تعذر الاتصال بالسيرفر.");
-    } finally {
-      setIsUploading(false);
-    }
+function Btn({ children, variant="primary", onClick, small, style={} }) {
+  const v = {
+    primary:{background:C.accent,color:"#fff",border:"none"},
+    ghost:{background:"transparent",color:C.dim,border:`1px solid ${C.border}`},
+    green:{background:C.green,color:"#fff",border:"none"},
+  };
+  return (
+    <button onClick={onClick} style={{...v[variant], borderRadius:10, cursor:"pointer", fontFamily:"'Tajawal',sans-serif", fontWeight:600, padding: small?"6px 14px":"10px 20px", fontSize: small?12:13, transition:"all .18s", ...style}}>{children}</button>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────
+export default function App() {
+  const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
+  const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
+  const [screen, setScreen] = useState("fund");
+
+  // ملاحظة: إذا كنت تستخدم صفحات مختلفة (Fund, Account, Request, Notif)، تأكد أن كل منها يستخدم 
+  // .toLocaleString("en-US") عند عرض المبالغ المالية.
+  
+  const handleLogout = () => {
+    localStorage.removeItem("qatifan_token");
+    localStorage.removeItem("qatifan_member");
+    window.location.reload();
   };
 
-  if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
-
-  const activeMember = accountData || member;
-  const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
-  const lateMonths = debt > 0 ? Math.floor(debt / 5) : 0; 
-  
-  const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
+  if (!token) return <div style={{padding:20, textAlign:'center'}}>يجب تسجيل الدخول</div>;
 
   return (
-    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="إجمالي المسدَّد" value={`${Number(subscriptions.filter(s => s.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0)).toLocaleString("en-US")} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
-        <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.gold : C.green}/>
-        <KPI label="الاشتراك الشهري" value="5 د.أ" sub="ثابت" color={C.accent}/>
+    <>
+      <style>{G}</style>
+      <div style={{minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", direction:"rtl"}}>
+        <header style={{background:C.surf, borderBottom:`1px solid ${C.border}`, padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+           <div style={{fontSize:14, fontWeight:700, color:C.text}}>صندوق عائلة قطيفان</div>
+           <button onClick={handleLogout} style={{background:"none", border:`1px solid ${C.border}`, borderRadius:8, padding:"4px 8px", color:C.muted, cursor:"pointer"}}>خروج</button>
+        </header>
+        <main style={{flex:1, padding:20, maxWidth:600, margin:"0 auto", width:"100%"}}>
+           <div style={{textAlign:'center', padding:50, color:C.text}}>مرحباً بك في لوحة تحكم العضو</div>
+        </main>
       </div>
-
-      <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>دفعاتك السابقة</div>
-        {subscriptions.length === 0 ? (
-          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد سجلات دفع حتى الآن.</div>
-        ) : (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:12}}>
-            {subscriptions.map((sub, i) => {
-              const isPaid = sub.status === 'paid';
-              return (
-                <div key={i} style={{
-                  borderRadius:10,padding:"8px 4px",textAlign:"center",
-                  background: isPaid ? C.greenSoft : C.goldSoft,
-                  border:`1px solid ${isPaid ? `${C.green}40` : `${C.gold}40`}`,
-                }}>
-                  <div style={{fontSize:9,marginBottom:3, color: isPaid ? "#86efac" : C.gold}}>
-                    {monthNames[sub.subscription_month]} {sub.subscription_year}
-                  </div>
-                  <div style={{fontSize:8,fontWeight:600, color: isPaid ? C.green : C.gold}}>
-                    {isPaid ? "✓" : "متأخر"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي</div>
-        {subscriptions.length === 0 ? (
-          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات لعرضها.</div>
-        ) : (
-          subscriptions.map((r, i, arr) => (
-            <div key={i} style={{
-              display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
-            }}>
-              <div>
-                <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
-                <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : "غير مسدد"}
-                </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <Tag label={r.status === 'paid' ? "مسدَّد" : "متأخر"} color={r.status === 'paid' ? C.green : C.red}/>
-                <span style={{
-                  fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
-                  color: r.status === 'paid' ? C.green : C.red,
-                }}>{Number(r.amount || 5).toLocaleString("en-US")} د.أ</span>
-              </div>
-            </div>
-          ))
-        )}
-      </Card>
-
-      {debt > 0 && (
-        <div style={{
-          background:C.goldSoft,border:`1px solid ${C.gold}40`,
-          borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
-        }}>
-          <span style={{fontSize:20}}>⚠️</span>
-          <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
-            <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-              يُرجى التحويل على البنك، ثم إرفاق الإيصال بالأسفل.
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
-        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          الرجاء اختيار الشهر الذي تريد السداد عنه، ثم إرفاق صورة الإيصال.
-        </p>
-        
-        {/* قوائم اختيار الشهر والسنة */}
-        <div style={{display:"flex", gap:10, marginBottom:16}}>
-          <select value={selectedMonth} onChange={e=>setSelectedMonth(e.target.value)} style={{flex:1, padding:"10px", borderRadius:10, background:C.surf2, color:C.text, border:`1px solid ${C.border}`, outline:"none", fontFamily:"'Tajawal',sans-serif"}}>
-             {monthNames.map((m, i) => i !== 0 && <option key={i} value={i}>{m}</option>)}
-          </select>
-          <select value={selectedYear} onChange={e=>setSelectedYear(e.target.value)} style={{flex:1, padding:"10px", borderRadius:10, background:C.surf2, color:C.text, border:`1px solid ${C.border}`, outline:"none", fontFamily:"'Tajawal',sans-serif"}}>
-             {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-
-        <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
-        <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
-          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
-        </Btn>
-      </Card>
-    </div>
+    </>
   );
 }
