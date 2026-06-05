@@ -507,38 +507,35 @@ function AnnouncementsScreen() {
 
 // 0. Login Screen
 function LoginScreen({ onLogin }) {
-  const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleRequestOTP = async () => {
-    if (!phone || phone.length < 10) { setError("الرجاء إدخال رقم جوال صحيح"); return; }
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setError("الرجاء إدخال اسم المستخدم وكلمة المرور");
+      return;
+    }
     setLoading(true); setError("");
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-      const res = await fetch(`${apiUrl}/auth/request-otp`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phoneNumber: phone })
-      });
-      if (res.ok) setStep(2); 
-      else setError("حدث خطأ غير متوقع"); 
-    } catch (err) { setError("تعذر الاتصال بالسيرفر"); }
-    setLoading(false);
-  };
 
-  const handleVerifyOTP = async () => {
-    if (!otp || otp.length < 4) { setError("الرجاء إدخال الرمز بشكل صحيح"); return; }
-    setLoading(true); setError("");
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-      const res = await fetch(`${apiUrl}/auth/verify-otp`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phoneNumber: phone, otp })
+      const res = await fetch(`${apiUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
       });
       const data = await res.json();
-      if (res.ok && data.token) onLogin(data.token, data.member || {});
-      else setError(data.error || "رمز التحقق غير صحيح"); 
-    } catch (err) { setError("تعذر الاتصال بالسيرفر."); }
+
+      if (res.ok && data.token) {
+        onLogin(data.token, data.member || {});
+      } else {
+        setError(data.error || "بيانات الدخول غير صحيحة");
+      }
+    } catch (err) {
+      setError("تعذر الاتصال بالسيرفر. تأكد من الإنترنت.");
+    }
     setLoading(false);
   };
 
@@ -548,12 +545,18 @@ function LoginScreen({ onLogin }) {
       <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
         <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
         <h2 style={{color:C.text, marginBottom:8, fontSize:22}}>صندوق عائلة قطيفان</h2>
+        <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>
+          أهلاً بك، الرجاء إدخال بيانات الدخول الخاصة بك.
+        </p>
+
         {error && <div style={{color:C.red, fontSize:12, marginBottom:16, background:C.redSoft, padding:8, borderRadius:8}}>{error}</div>}
-        {step === 1 ? (
-          <><Input type="tel" placeholder="مثال: 07XXXXXXXX" value={phone} onChange={setPhone} /><Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}}>إرسال الرمز</Btn></>
-        ) : (
-          <><Input type="number" placeholder="1234" value={otp} onChange={setOtp} /><Btn onClick={handleVerifyOTP} style={{width:"100%", marginTop:10}} variant="green">دخول</Btn></>
-        )}
+
+        <Input type="text" placeholder="اسم المستخدم (رقم الجوال)" value={username} onChange={setUsername} />
+        <Input type="password" placeholder="كلمة المرور" value={password} onChange={setPassword} />
+
+        <Btn onClick={handleLogin} style={{width:"100%", marginTop:10}} variant="primary">
+          {loading ? "⏳ جاري التحقق..." : "تسجيل الدخول"}
+        </Btn>
       </Card>
     </div>
   );
