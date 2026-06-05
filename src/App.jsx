@@ -188,22 +188,22 @@ function AccountScreen({ member, token }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  
+  // حالات اختيار الشهر والسنة (الافتراضي هو الشهر والسنة الحاليين)
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
   const fileInputRef = useRef(null);
+  const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
   useEffect(() => {
     const fetchAccountData = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        const res = await fetch(`${apiUrl}/api/member/account`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok) setAccountData(data);
-      } catch (err) {
-        console.error("خطأ:", err);
-      } finally {
-        setIsLoading(false);
-      }
+        const res = await fetch(`${apiUrl}/api/member/account`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) setAccountData(await res.json());
+      } catch (err) { console.error("خطأ:", err); } 
+      finally { setIsLoading(false); }
     };
     fetchAccountData();
   }, [token]);
@@ -212,8 +212,11 @@ function AccountScreen({ member, token }) {
     const file = e.target.files[0];
     if (!file) return;
     setIsUploading(true);
+    
     const formData = new FormData();
     formData.append('receipt', file);
+    formData.append('month', selectedMonth); // إرسال الشهر
+    formData.append('year', selectedYear);   // إرسال السنة
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
@@ -225,24 +228,17 @@ function AccountScreen({ member, token }) {
       if (response.ok) {
         setUploadSuccess(true);
         setTimeout(() => setUploadSuccess(false), 3500);
-      } else {
-        alert("حدث خطأ أثناء الرفع");
-      }
-    } catch (error) {
-      alert("تعذر الاتصال بالسيرفر.");
-    } finally {
-      setIsUploading(false);
-    }
+      } else alert("حدث خطأ أثناء الرفع");
+    } catch (error) { alert("تعذر الاتصال بالسيرفر."); } 
+    finally { setIsUploading(false); }
   };
 
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
 
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
-  const lateMonths = debt > 0 ? Math.floor(debt / 5) : 0; // تعديل ليعكس اشتراك 5 دنانير
-  
+  const lateMonths = debt > 0 ? Math.floor(debt / 5) : 0;
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
-  const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -261,17 +257,9 @@ function AccountScreen({ member, token }) {
             {subscriptions.map((sub, i) => {
               const isPaid = sub.status === 'paid';
               return (
-                <div key={i} style={{
-                  borderRadius:10,padding:"8px 4px",textAlign:"center",
-                  background: isPaid ? C.greenSoft : C.goldSoft,
-                  border:`1px solid ${isPaid ? `${C.green}40` : `${C.gold}40`}`,
-                }}>
-                  <div style={{fontSize:9,marginBottom:3, color: isPaid ? "#86efac" : C.gold}}>
-                    {monthNames[sub.subscription_month]} {sub.subscription_year}
-                  </div>
-                  <div style={{fontSize:8,fontWeight:600, color: isPaid ? C.green : C.gold}}>
-                    {isPaid ? "✓" : "متأخر"}
-                  </div>
+                <div key={i} style={{ borderRadius:10,padding:"8px 4px",textAlign:"center", background: isPaid ? C.greenSoft : C.goldSoft, border:`1px solid ${isPaid ? `${C.green}40` : `${C.gold}40`}` }}>
+                  <div style={{fontSize:9,marginBottom:3, color: isPaid ? "#86efac" : C.gold}}>{monthNames[sub.subscription_month]} {sub.subscription_year}</div>
+                  <div style={{fontSize:8,fontWeight:600, color: isPaid ? C.green : C.gold}}>{isPaid ? "✓" : "متأخر"}</div>
                 </div>
               );
             })}
@@ -285,22 +273,14 @@ function AccountScreen({ member, token }) {
           <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات لعرضها.</div>
         ) : (
           subscriptions.map((r, i, arr) => (
-            <div key={i} style={{
-              display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
-            }}>
+            <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none" }}>
               <div>
                 <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
-                <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : "غير مسدد"}
-                </div>
+                <div style={{fontSize:10,color:C.muted,marginTop:1}}>{r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : "غير مسدد"}</div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <Tag label={r.status === 'paid' ? "مسدَّد" : "متأخر"} color={r.status === 'paid' ? C.green : C.red}/>
-                <span style={{
-                  fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
-                  color: r.status === 'paid' ? C.green : C.red,
-                }}>{Number(r.amount || 5).toLocaleString("en-US")} د.أ</span>
+                <span style={{ fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace", color: r.status === 'paid' ? C.green : C.red }}>{Number(r.amount || 5).toLocaleString("en-US")} د.أ</span>
               </div>
             </div>
           ))
@@ -308,25 +288,35 @@ function AccountScreen({ member, token }) {
       </Card>
 
       {debt > 0 && (
-        <div style={{
-          background:C.goldSoft,border:`1px solid ${C.gold}40`,
-          borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
-        }}>
+        <div style={{ background:C.goldSoft,border:`1px solid ${C.gold}40`, borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
           <span style={{fontSize:20}}>⚠️</span>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
-            <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-              يُرجى التحويل على البنك، ثم إرفاق الإيصال بالأسفل.
-            </div>
+            <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>يُرجى التحويل على البنك، ثم إرفاق الإيصال بالأسفل.</div>
           </div>
         </div>
       )}
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
-        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          بعد إتمام التحويل البنكي، قم بإرفاق صورة الإيصال هنا لمراجعتها واعتمادها من قبل الإدارة.
-        </p>
+        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>حدد الشهر والسنة التي تريد الدفع عنها، ثم قم بإرفاق صورة الإيصال.</p>
+        
+        {/* حقول اختيار الشهر والسنة */}
+        <div style={{display:"flex", gap:10, marginBottom:16}}>
+          <div style={{flex:1}}>
+            <label style={{display:"block", fontSize:12, color:C.dim, marginBottom:6}}>الشهر</label>
+            <select value={selectedMonth} onChange={e=>setSelectedMonth(Number(e.target.value))} style={{width:"100%", padding:"10px", background:C.surf2, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, fontFamily:"'Tajawal',sans-serif", outline:"none"}}>
+              {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{monthNames[m]}</option>)}
+            </select>
+          </div>
+          <div style={{flex:1}}>
+            <label style={{display:"block", fontSize:12, color:C.dim, marginBottom:6}}>السنة</label>
+            <select value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))} style={{width:"100%", padding:"10px", background:C.surf2, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, fontFamily:"'Tajawal',sans-serif", outline:"none"}}>
+              {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
@@ -335,7 +325,6 @@ function AccountScreen({ member, token }) {
     </div>
   );
 }
-
 // 3. Request
 function RequestScreen({ token }) {
   const [type, setType] = useState("loan");
