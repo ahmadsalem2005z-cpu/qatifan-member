@@ -74,28 +74,6 @@ function Tag({ label, color=C.accent }) {
   );
 }
 
-function Modal({ title, onClose, children }) {
-  return (
-    <div style={{
-      position:"fixed",inset:0,background:"rgba(0,0,0,.75)",
-      display:"flex",alignItems:"center",justifyContent:"center",
-      zIndex:1000,backdropFilter:"blur(4px)",
-    }}>
-      <div className="anim" style={{
-        background:C.surf,border:`1px solid ${C.border}`,
-        borderRadius:20,padding:28,width:"min(480px,95vw)",
-        maxHeight:"90vh",overflowY:"auto",
-      }}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-          <h3 style={{color:C.text,fontSize:16,fontWeight:700}}>{title}</h3>
-          <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:20}}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function Input({ label, value, onChange, type="text", placeholder, textarea, rows=3 }) {
   const s = {
     width:"100%", padding:"10px 14px",
@@ -115,65 +93,6 @@ function Input({ label, value, onChange, type="text", placeholder, textarea, row
   );
 }
 
-// ── MOCK DATA ─────────────────────────────────────────────────────────────
-const MEMBER = {
-  name:"عبدالله محمد القطيفان",
-  initials:"عق",
-  phone:"+966501234567",
-  email:"a.qatifan@example.com",
-  joinDate:"يناير 2024",
-  monthlyAmount:150,
-  totalPaid:600,
-  totalDebt:300,
-  paidMonths:4,
-};
-
-const MONTHS_2025 = [
-  {m:"يناير",  paid:true,  date:"5 يناير"},
-  {m:"فبراير", paid:true,  date:"3 فبراير"},
-  {m:"مارس",   paid:true,  date:"2 مارس"},
-  {m:"أبريل",  paid:true,  date:"1 أبريل"},
-  {m:"مايو",   paid:false, date:"متأخر"},
-  {m:"يونيو",  paid:false, date:"متأخر"},
-  {m:"يوليو",  paid:null,  date:"قادم"},
-  {m:"أغسطس",  paid:null,  date:"قادم"},
-  {m:"سبتمبر", paid:null,  date:"قادم"},
-  {m:"أكتوبر", paid:null,  date:"قادم"},
-  {m:"نوفمبر", paid:null,  date:"قادم"},
-  {m:"ديسمبر", paid:null,  date:"قادم"},
-];
-
-const FUND_EXPENSES = [
-  {icon:"💍",label:"نقوط زواج — سالم القطيفان",  amount:1000, date:"24 يونيو 2025", cat:"wedding"},
-  {icon:"🕊️",label:"عزاء — والدة أحمد القطيفان", amount:500,  date:"18 يونيو 2025", cat:"condolence"},
-  {icon:"💍",label:"نقوط زواج — ناصر القطيفان",   amount:1000, date:"10 يونيو 2025", cat:"wedding"},
-  {icon:"🚨",label:"مساعدة طارئة — علي القطيفان", amount:800,  date:"2 يونيو 2025",  cat:"emergency"},
-  {icon:"🕊️",label:"عزاء — عم عبدالرحمن القطيفان",amount:500,  date:"25 مايو 2025",  cat:"condolence"},
-];
-
-const ANNOUNCEMENTS = [
-  {
-    id:1, title:"اجتماع الصندوق السنوي",
-    body:"يُعقد الاجتماع السنوي لصندوق العائلة يوم الجمعة 15 يوليو 2025 بعد صلاة العشاء في منزل الشيخ محمد القطيفان. الحضور إلزامي لجميع الأعضاء.",
-    date:"1 يونيو 2025", type:"meeting", icon:"📅",
-  },
-  {
-    id:2, title:"تكريم الأعضاء الملتزمين",
-    body:"ستقوم إدارة الصندوق بتكريم الأعضاء الملتزمين بالدفع لمدة 12 شهراً متواصلة في الاجتماع السنوي القادم.",
-    date:"28 مايو 2025", type:"honor", icon:"🏆",
-  },
-  {
-    id:3, title:"تحديث قيمة الاشتراك",
-    body:"تم الاتفاق في الاجتماع الأخير على رفع قيمة الاشتراك الشهري من 100 ريال إلى 150 ريال اعتباراً من يناير 2025.",
-    date:"15 يناير 2025", type:"update", icon:"📢",
-  },
-  {
-    id:4, title:"وفاة الحاجة أم سالم القطيفان",
-    body:"بقلوب مؤمنة نعلمكم بوفاة والدة الأخ أحمد القطيفان. العزاء يُقام في منزل العائلة. رحمها الله وأسكنها فسيح جناته.",
-    date:"18 يونيو 2025", type:"condolence", icon:"🕊️",
-  },
-];
-
 // ── SCREENS ───────────────────────────────────────────────────────────────
 
 // 1. Fund Summary
@@ -185,7 +104,6 @@ function FundScreen({ token }) {
     const fetchSummary = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        // سنقوم بإنشاء هذا المسار في الباك-إند في الخطوة القادمة
         const res = await fetch(`${apiUrl}/api/fund/summary`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -206,14 +124,13 @@ function FundScreen({ token }) {
     return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
   }
 
-  // استخدام البيانات الحقيقية من السيرفر (أو الأرقام الافتراضية مؤقتاً)
   const balance = summary?.balance ?? 47850;
   const activeMembersCount = summary?.activeMembers ?? 28;
   const totalExpenses = summary?.totalExpenses ?? 27050;
   const paidPct = summary?.paidPct ?? 79;
   const paidCount = summary?.paidCount ?? 19;
   const expectedCount = summary?.expectedCount ?? 24;
-  const expensesList = summary?.recentExpenses || FUND_EXPENSES;
+  const expensesList = summary?.recentExpenses || [];
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -223,7 +140,6 @@ function FundScreen({ token }) {
         <KPI label="المصروف هذا العام" value={`${totalExpenses.toLocaleString("ar-SA")} ر.س`} sub="على 14 حالة" color={C.purple}/>
       </div>
 
-      {/* Compliance */}
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
@@ -237,7 +153,6 @@ function FundScreen({ token }) {
         </div>
       </Card>
 
-      {/* Recent expenses */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>آخر المصروفات</div>
         {expensesList.map((e,i)=>(
@@ -263,18 +178,15 @@ function FundScreen({ token }) {
   );
 }
 
-
 // 2. My Account
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- حالات رفع الإيصال ---
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // --- جلب البيانات الحقيقية من السيرفر ---
   useEffect(() => {
     const fetchAccountData = async () => {
       try {
@@ -295,7 +207,6 @@ function AccountScreen({ member, token }) {
     fetchAccountData();
   }, [token]);
 
-  // --- دالة رفع الملف للسيرفر ---
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -307,7 +218,9 @@ function AccountScreen({ member, token }) {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
       const response = await fetch(`${apiUrl}/api/upload-receipt`, {
         method: 'POST',
-        // سيتم إضافة التوكن لاحقاً لمسار الرفع كما فعلنا في الجلب
+        headers: { 
+          'Authorization': `Bearer ${token}` 
+        },
         body: formData,
       });
       const data = await response.json();
@@ -315,7 +228,7 @@ function AccountScreen({ member, token }) {
         setUploadSuccess(true);
         setTimeout(() => setUploadSuccess(false), 3500);
       } else {
-        alert("حدث خطأ أثناء الرفع: " + data.error);
+        alert("حدث خطأ أثناء الرفع: " + (data.error || "تعذر الرفع"));
       }
     } catch (error) {
       alert("تعذر الاتصال بالسيرفر. تأكد من اتصالك بالإنترنت.");
@@ -324,20 +237,15 @@ function AccountScreen({ member, token }) {
     }
   };
 
-  // شاشة تحميل مؤقتة ريثما تصل البيانات
   if (isLoading) {
     return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
   }
 
-  // الحسابات والبيانات
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
   const lateMonths = debt > 0 ? Math.floor(debt / 150) : 0;
   
-  // تصفية الدفعات (لأن LEFT JOIN قد يرجع null إذا لم تكن هناك دفعات)
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
-  
-  // أسماء الأشهر للترجمة
   const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
   return (
@@ -353,7 +261,6 @@ function AccountScreen({ member, token }) {
         <KPI label="الاشتراك الشهري" value="150 ر.س" sub="ثابت" color={C.accent}/>
       </div>
 
-      {/* Month grid (متصل بقاعدة البيانات) */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>دفعاتك السابقة</div>
         {subscriptions.length === 0 ? (
@@ -381,7 +288,6 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
-      {/* Statement (متصل بقاعدة البيانات) */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي</div>
         {subscriptions.length === 0 ? (
@@ -410,7 +316,6 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
-      {/* Debt alert */}
       {debt > 0 && (
         <div style={{
           background:C.goldSoft,border:`1px solid ${C.gold}40`,
@@ -426,7 +331,6 @@ function AccountScreen({ member, token }) {
         </div>
       )}
 
-      {/* Upload Receipt */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
@@ -443,6 +347,7 @@ function AccountScreen({ member, token }) {
     </div>
   );
 }
+
 // 3. Request
 function RequestScreen() {
   const [type, setType]       = useState("loan");
@@ -519,17 +424,11 @@ function RequestScreen() {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>تفاصيل الطلب</div>
-
-        <Input label="المبلغ المطلوب (ر.س) *" value={amount} onChange={setAmount}
-          type="number" placeholder="500"/>
+        <Input label="المبلغ المطلوب (ر.س) *" value={amount} onChange={setAmount} type="number" placeholder="500"/>
         {errors.amount && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.amount}</div>}
-
-        <Input label="سبب الطلب *" value={reason} onChange={setReason}
-          placeholder="اشرح سبب طلبك باختصار..." textarea/>
+        <Input label="سبب الطلب *" value={reason} onChange={setReason} placeholder="اشرح سبب طلبك باختصار..." textarea/>
         {errors.reason && <div style={{color:C.red,fontSize:11,marginTop:-10,marginBottom:12}}>{errors.reason}</div>}
-
-        <Input label="تاريخ الحاجة المتوقع" value={timing} onChange={setTiming}
-          placeholder="مثال: خلال أسبوعين"/>
+        <Input label="تاريخ الحاجة المتوقع" value={timing} onChange={setTiming} placeholder="مثال: خلال أسبوعين"/>
 
         {type==="loan" && (
           <div style={{background:C.surf2,borderRadius:12,padding:14,marginBottom:14}}>
@@ -553,7 +452,7 @@ function RequestScreen() {
           borderRadius:10,padding:"10px 14px",marginBottom:16,
           fontSize:12,color:C.dim,
         }}>
-          💡 الحد الأقصى للطلب: <strong style={{color:C.accent}}>4,785 ر.س</strong> (بعد الاحتياطي 10%)
+          💡 الحد الأقصى للطلب: <strong style={{color:C.accent}}>4,785 ر.س</strong>
         </div>
 
         <Btn onClick={()=>{ if(validate()) setSubmitted(true); }} style={{width:"100%"}}>
@@ -572,6 +471,13 @@ function AnnouncementsScreen() {
   const [saved, setSaved]     = useState(false);
   const [expanded, setExpanded] = useState(null);
 
+  const ANNOUNCEMENTS = [
+    { id:1, title:"اجتماع الصندوق السنوي", body:"يُعقد الاجتماع السنوي لصندوق العائلة...", date:"1 يونيو 2026", type:"meeting" },
+    { id:2, title:"تكريم الأعضاء الملتزمين", body:"ستقوم إدارة الصندوق بتكريم الأعضاء...", date:"28 مايو 2026", type:"honor" },
+    { id:3, title:"تحديث قيمة الاشتراك", body:"تم الاتفاق في الاجتماع الأخير على رفع قيمة الاشتراك...", date:"15 يناير 2026", type:"update" },
+    { id:4, title:"وفاة الحاجة أم سالم القطيفان", body:"بقلوب مؤمنة نعلمكم بوفاة والدة الأخ أحمد...", date:"18 يونيو 2026", type:"condolence" },
+  ];
+
   const typeColors = {
     meeting:{bg:"#1d3557",border:"#3b82f6",icon:"📅"},
     honor:  {bg:"#2d2006",border:"#f59e0b",icon:"🏆"},
@@ -581,12 +487,8 @@ function AnnouncementsScreen() {
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
-
-      {/* Announcements */}
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>
-          📣 إعلانات العائلة
-        </div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>📣 إعلانات العائلة</div>
         {ANNOUNCEMENTS.map((a)=>{
           const tc = typeColors[a.type] || typeColors.update;
           const isOpen = expanded===a.id;
@@ -604,9 +506,7 @@ function AnnouncementsScreen() {
                     <div style={{fontSize:10,color:C.muted,marginTop:2}}>{a.date}</div>
                   </div>
                 </div>
-                <span style={{color:C.muted,fontSize:14,flexShrink:0,marginTop:2}}>
-                  {isOpen?"▲":"▼"}
-                </span>
+                <span style={{color:C.muted,fontSize:14,flexShrink:0,marginTop:2}}>{isOpen?"▲":"▼"}</span>
               </div>
               {isOpen && (
                 <div style={{
@@ -619,13 +519,8 @@ function AnnouncementsScreen() {
         })}
       </Card>
 
-      {/* Notification prefs */}
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>
-          🔔 تفضيلات التنبيه
-        </div>
-
-        {/* Channels */}
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>🔔 تفضيلات التنبيه</div>
         {[
           {label:"واتساب",icon:"📱",sub:"+966501234567", val:waEnabled, set:setWa, color:"#25D366"},
           {label:"البريد الإلكتروني",icon:"📧",sub:"a.qatifan@example.com", val:emailEnabled, set:setEmail, color:C.accent},
@@ -649,19 +544,14 @@ function AnnouncementsScreen() {
             }}>
               <div style={{
                 width:18,height:18,borderRadius:9,background:"#fff",
-                position:"absolute",top:2,
-                right: ch.val?2:22,
-                transition:"right .2s",
+                position:"absolute",top:2,right: ch.val?2:22,transition:"right .2s",
               }}/>
             </div>
           </div>
         ))}
 
-        {/* Frequency */}
         <div style={{marginTop:16,marginBottom:16}}>
-          <div style={{fontSize:12,color:C.dim,marginBottom:10,fontWeight:500}}>
-            تكرار التذكير عند وجود ذمم
-          </div>
+          <div style={{fontSize:12,color:C.dim,marginBottom:10,fontWeight:500}}>تكرار التذكير عند وجود ذمم</div>
           <div style={{display:"flex",gap:8}}>
             {[["weekly","أسبوعياً"],["biweekly","كل أسبوعين"],["monthly","شهرياً"]].map(([v,l])=>(
               <div key={v} onClick={()=>setFreq(v)} style={{
@@ -675,7 +565,6 @@ function AnnouncementsScreen() {
           </div>
         </div>
 
-        {/* Notification types */}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:12,color:C.dim,marginBottom:10,fontWeight:500}}>أنواع الإشعارات</div>
           {[
@@ -694,8 +583,7 @@ function AnnouncementsScreen() {
           ))}
         </div>
 
-        <Btn onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2500);}}
-          style={{width:"100%"}} variant={saved?"green":"primary"}>
+        <Btn onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2500);}} style={{width:"100%"}} variant={saved?"green":"primary"}>
           {saved?"✅ تم الحفظ":"💾 حفظ التفضيلات"}
         </Btn>
       </Card>
@@ -802,7 +690,6 @@ function LoginScreen({ onLogin }) {
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
-  // --- حالة تسجيل الدخول ---
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
   
@@ -822,7 +709,6 @@ export default function App() {
     notif: <AnnouncementsScreen/>
   };
 
-  // دالة تُنفذ عند نجاح تسجيل الدخول
   const handleLoginSuccess = (newToken, memberData) => {
     localStorage.setItem("qatifan_token", newToken);
     localStorage.setItem("qatifan_member", JSON.stringify(memberData));
@@ -830,7 +716,6 @@ export default function App() {
     setMember(memberData);
   };
 
-  // دالة تسجيل الخروج
   const handleLogout = () => {
     localStorage.removeItem("qatifan_token");
     localStorage.removeItem("qatifan_member");
@@ -838,12 +723,10 @@ export default function App() {
     setMember(null);
   };
 
-  // إذا لم يكن العضو مسجلاً للدخول، اعرض شاشة الحماية فقط
   if (!token) {
     return <LoginScreen onLogin={handleLoginSuccess} />;
   }
 
-  // إذا كان مسجلاً، اعرض التطبيق بالكامل
   return (
     <>
       <style>{G}</style>
@@ -852,7 +735,6 @@ export default function App() {
         display:"flex",flexDirection:"column",direction:"rtl",
         fontFamily:"'Tajawal',sans-serif",
       }}>
-        {/* Header */}
         <header style={{
           background:C.surf,borderBottom:`1px solid ${C.border}`,
           padding:"14px 20px",display:"flex",
@@ -866,11 +748,9 @@ export default function App() {
               display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,fontWeight:700,color:C.accent,
             }}>
-              {/* التعديل: استخدام full_name لاقتطاع أول حرفين */}
               {member?.full_name ? member.full_name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
             </div>
             <div>
-              {/* التعديل: عرض الاسم الكامل الصحيح من قاعدة البيانات */}
               <div style={{fontSize:13,fontWeight:700,color:C.text}}>{member?.full_name || "اسم العضو"}</div>
               <div style={{fontSize:10,color:C.muted}}>عضو نشط</div>
             </div>
@@ -884,12 +764,10 @@ export default function App() {
           </button>
         </header>
 
-        {/* Main content */}
         <main style={{flex:1,padding:"20px 16px 100px",maxWidth:600,margin:"0 auto",width:"100%"}}>
           <div key={screen}>{SCREENS[screen]}</div>
         </main>
 
-        {/* Bottom nav */}
         <nav style={{
           position:"fixed",bottom:0,right:0,left:0,
           background:C.surf,borderTop:`1px solid ${C.border}`,
