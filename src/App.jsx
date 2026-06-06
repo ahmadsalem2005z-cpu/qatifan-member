@@ -214,9 +214,10 @@ function AccountScreen({ member, token }) {
     setIsUploading(true);
     
     const formData = new FormData();
+    // إرسال النصوص قبل الملفات لمنع مشاكل الـ Parsing في السيرفر
+    formData.append('month', selectedMonth); 
+    formData.append('year', selectedYear);   
     formData.append('receipt', file);
-    formData.append('month', selectedMonth); // إرسال الشهر
-    formData.append('year', selectedYear);   // إرسال السنة
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
@@ -228,7 +229,10 @@ function AccountScreen({ member, token }) {
       if (response.ok) {
         setUploadSuccess(true);
         setTimeout(() => setUploadSuccess(false), 3500);
-      } else alert("حدث خطأ أثناء الرفع");
+      } else {
+        const errorData = await response.json();
+        alert("حدث خطأ من السيرفر: " + (errorData.error || "تعذر الرفع"));
+      }
     } catch (error) { alert("تعذر الاتصال بالسيرفر."); } 
     finally { setIsUploading(false); }
   };
@@ -237,14 +241,13 @@ function AccountScreen({ member, token }) {
 
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
-  const lateMonths = debt > 0 ? Math.floor(debt / 5) : 0;
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
         <KPI label="إجمالي المسدَّد" value={`${Number(subscriptions.filter(s => s.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0)).toLocaleString("en-US")} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
-        <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.gold : C.green}/>
+        <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={debt > 0 ? "رصيد غير مسدد" : "ملتزم بالسداد"} color={debt > 0 ? C.gold : C.green}/>
         <KPI label="الاشتراك الشهري" value="5 د.أ" sub="ثابت" color={C.accent}/>
       </div>
 
@@ -291,7 +294,7 @@ function AccountScreen({ member, token }) {
         <div style={{ background:C.goldSoft,border:`1px solid ${C.gold}40`, borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
           <span style={{fontSize:20}}>⚠️</span>
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
+            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمة مالية مستحقة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
             <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>يُرجى التحويل على البنك، ثم إرفاق الإيصال بالأسفل.</div>
           </div>
         </div>
@@ -325,6 +328,7 @@ function AccountScreen({ member, token }) {
     </div>
   );
 }
+
 // 3. Request
 function RequestScreen({ token }) {
   const [type, setType] = useState("loan");
