@@ -265,7 +265,6 @@ function AccountScreen({ member, token }) {
     : "غير محدد";
   
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
-  const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -511,10 +510,10 @@ function AnnouncementsScreen({ token }) {
   );
 }
 
-// 0. Auth Screen (Login & Register + OTP)
+// 0. Auth Screen (Login, Register & Forgot Password)
 function AuthScreen({ onLogin }) {
-  const [isLogin, setIsLogin] = useState(true);
-  const [step, setStep] = useState(1); // 1: Form, 2: OTP (for registration only)
+  const [view, setView] = useState("login"); // "login", "register", "forgot"
+  const [step, setStep] = useState(1); // 1: Form/Phone, 2: OTP
   
   // Login State
   const [loginPhone, setLoginPhone] = useState("");
@@ -529,15 +528,22 @@ function AuthScreen({ onLogin }) {
   const [maritalStatus, setMaritalStatus] = useState("Single");
   const [otp, setOtp] = useState("");
 
+  // Forgot Password State
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
 
+  const resetMessages = () => { setError(""); setSuccess(""); };
+
   const handleLogin = async () => {
     if (!loginPhone || !loginPass) { setError("الرجاء إدخال رقم الجوال وكلمة المرور"); return; }
-    setLoading(true); setError(""); setSuccess("");
+    setLoading(true); resetMessages();
     try {
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -550,13 +556,16 @@ function AuthScreen({ onLogin }) {
     setLoading(false);
   };
 
-  const handleRequestOTP = async () => {
-    if (!fullName || !phone || !password || !dob) { setError("جميع الحقول الأساسية مطلوبة"); return; }
-    setLoading(true); setError(""); setSuccess("");
+  const handleRequestOTP = async (isForgot = false) => {
+    const targetPhone = isForgot ? forgotPhone : phone;
+    if (isForgot && !targetPhone) { setError("الرجاء إدخال رقم الجوال"); return; }
+    if (!isForgot && (!fullName || !targetPhone || !password || !dob)) { setError("جميع الحقول الأساسية مطلوبة"); return; }
+    
+    setLoading(true); resetMessages();
     try {
       const res = await fetch(`${apiUrl}/auth/request-otp`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: phone })
+        body: JSON.stringify({ phone_number: targetPhone })
       });
       const data = await res.json();
       if (res.ok) { setStep(2); setSuccess("تم إرسال رمز التحقق إلى جوالك."); }
@@ -567,7 +576,7 @@ function AuthScreen({ onLogin }) {
 
   const handleRegister = async () => {
     if (!otp) { setError("أدخل رمز التحقق"); return; }
-    setLoading(true); setError(""); setSuccess("");
+    setLoading(true); resetMessages();
     try {
       const res = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -576,7 +585,24 @@ function AuthScreen({ onLogin }) {
       const data = await res.json();
       if (res.ok) {
         setSuccess("تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول.");
-        setTimeout(() => { setIsLogin(true); setStep(1); setSuccess(""); }, 3000);
+        setTimeout(() => { setView("login"); setStep(1); resetMessages(); }, 3000);
+      } else setError(data.error || "رمز التحقق غير صحيح");
+    } catch (err) { setError("تعذر الاتصال بالسيرفر."); }
+    setLoading(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!forgotOtp || !newPassword) { setError("الرجاء إدخال الرمز وكلمة المرور الجديدة"); return; }
+    setLoading(true); resetMessages();
+    try {
+      const res = await fetch(`${apiUrl}/auth/reset-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: forgotPhone, otp: forgotOtp, new_password: newPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess("تم تغيير كلمة المرور بنجاح! يمكنك تسجيل الدخول الآن.");
+        setTimeout(() => { setView("login"); setStep(1); resetMessages(); setForgotPhone(""); setForgotOtp(""); setNewPassword(""); }, 3000);
       } else setError(data.error || "رمز التحقق غير صحيح");
     } catch (err) { setError("تعذر الاتصال بالسيرفر."); }
     setLoading(false);
@@ -592,23 +618,30 @@ function AuthScreen({ onLogin }) {
         {error && <div style={{color:C.red, fontSize:12, marginBottom:16, background:C.redSoft, padding:8, borderRadius:8}}>{error}</div>}
         {success && <div style={{color:C.green, fontSize:12, marginBottom:16, background:C.greenSoft, padding:8, borderRadius:8}}>{success}</div>}
 
-        {isLogin ? (
+        {view === "login" && (
           <>
             <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>تسجيل الدخول إلى حسابك.</p>
             <Input type="tel" placeholder="رقم الجوال" value={loginPhone} onChange={setLoginPhone} />
             <Input type="password" placeholder="كلمة المرور" value={loginPass} onChange={setLoginPass} />
+            
+            <div style={{textAlign:"right", marginBottom:16}}>
+              <span onClick={() => {setView("forgot"); setStep(1); resetMessages();}} style={{fontSize:11, color:C.muted, cursor:"pointer", textDecoration:"underline"}}>نسيت كلمة المرور؟</span>
+            </div>
+
             <Btn onClick={handleLogin} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "دخول"}</Btn>
             <div style={{marginTop:20, fontSize:12, color:C.dim}}>
-              ليس لديك حساب؟ <span onClick={()=>setIsLogin(false)} style={{color:C.accent, cursor:"pointer", fontWeight:700}}>تسجيل جديد</span>
+              ليس لديك حساب؟ <span onClick={() => {setView("register"); setStep(1); resetMessages();}} style={{color:C.accent, cursor:"pointer", fontWeight:700}}>تسجيل جديد</span>
             </div>
           </>
-        ) : (
+        )}
+
+        {view === "register" && (
           <>
             {step === 1 ? (
               <>
                 <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>إنشاء حساب عضو جديد.</p>
                 <Input type="text" placeholder="الاسم الرباعي *" value={fullName} onChange={setFullName} />
-                <Input type="tel" placeholder="رقم الجوال (هو اسم الدخول) *" value={phone} onChange={setPhone} />
+                <Input type="tel" placeholder="رقم الجوال (اسم الدخول) *" value={phone} onChange={setPhone} />
                 <Input type="email" placeholder="البريد الإلكتروني (اختياري)" value={email} onChange={setEmail} />
                 <Input type="password" placeholder="كلمة المرور *" value={password} onChange={setPassword} />
                 <Input type="date" label="تاريخ الميلاد *" value={dob} onChange={setDob} />
@@ -616,21 +649,36 @@ function AuthScreen({ onLogin }) {
                   {value:"Single", label:"أعزب / عزباء"}, {value:"Married", label:"متزوج / متزوجة"},
                   {value:"Divorced", label:"مطلق / مطلقة"}, {value:"Widowed", label:"أرمل / أرملة"}
                 ]}/>
-                <Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "التالي (التحقق من الرقم)"}</Btn>
+                <Btn onClick={() => handleRequestOTP(false)} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "التالي (التحقق من الرقم)"}</Btn>
               </>
             ) : (
               <>
                 <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>أدخل الرمز المكون من 4 أرقام المرسل إليك.</p>
                 <Input type="number" placeholder="1234" value={otp} onChange={setOtp} />
                 <Btn onClick={handleRegister} style={{width:"100%", marginTop:10}} variant="green">{loading ? "⏳..." : "تأكيد وإنشاء الحساب"}</Btn>
-                <Btn onClick={()=>setStep(1)} style={{width:"100%", marginTop:10}} variant="ghost">رجوع</Btn>
               </>
             )}
-            {step === 1 && (
-              <div style={{marginTop:20, fontSize:12, color:C.dim}}>
-                لديك حساب بالفعل؟ <span onClick={()=>setIsLogin(true)} style={{color:C.accent, cursor:"pointer", fontWeight:700}}>تسجيل الدخول</span>
-              </div>
+            <Btn onClick={() => step === 1 ? setView("login") : setStep(1)} style={{width:"100%", marginTop:10}} variant="ghost">رجوع</Btn>
+          </>
+        )}
+
+        {view === "forgot" && (
+          <>
+            {step === 1 ? (
+              <>
+                <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>أدخل رقم الجوال المسجل لاستعادة كلمة المرور.</p>
+                <Input type="tel" placeholder="رقم الجوال" value={forgotPhone} onChange={setForgotPhone} />
+                <Btn onClick={() => handleRequestOTP(true)} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "إرسال رمز التحقق"}</Btn>
+              </>
+            ) : (
+              <>
+                <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>أدخل الرمز المرسل وكلمة المرور الجديدة.</p>
+                <Input type="number" placeholder="رمز التحقق (4 أرقام)" value={forgotOtp} onChange={setForgotOtp} />
+                <Input type="password" placeholder="كلمة المرور الجديدة" value={newPassword} onChange={setNewPassword} />
+                <Btn onClick={handleResetPassword} style={{width:"100%", marginTop:10}} variant="green">{loading ? "⏳..." : "تغيير كلمة المرور"}</Btn>
+              </>
             )}
+            <Btn onClick={() => step === 1 ? setView("login") : setStep(1)} style={{width:"100%", marginTop:10}} variant="ghost">رجوع</Btn>
           </>
         )}
       </Card>
