@@ -93,6 +93,23 @@ function Input({ label, value, onChange, type="text", placeholder, textarea, row
   );
 }
 
+function Select({ label, value, onChange, options }) {
+  const s = {
+    width:"100%", padding:"10px 14px",
+    background:C.surf2, border:`1px solid ${C.border}`,
+    borderRadius:10, color:C.text, fontSize:13,
+    fontFamily:"'Tajawal',sans-serif", outline:"none",
+  };
+  return (
+    <div style={{marginBottom:14}}>
+      {label && <label style={{display:"block",fontSize:12,color:C.dim,marginBottom:5,fontWeight:500}}>{label}</label>}
+      <select style={s} value={value} onChange={e=>onChange(e.target.value)}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
 // ── SCREENS ───────────────────────────────────────────────────────────────
 
 // 1. Fund Summary
@@ -182,7 +199,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account
+// 2. My Account (Updated to 2 JD / Last Paid Date Logic)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -212,6 +229,7 @@ function AccountScreen({ member, token }) {
     const file = e.target.files[0];
     if (!file) return;
     setIsUploading(true);
+    
     const formData = new FormData();
     formData.append('receipt', file);
 
@@ -239,7 +257,12 @@ function AccountScreen({ member, token }) {
 
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
-  const lateMonths = debt > 0 ? Math.floor(debt / 5) : 0; // تعديل ليعكس اشتراك 5 دنانير
+  
+  // المنطق المالي الجديد: كل 2 دينار = شهر
+  const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
+  const lastPaidDate = activeMember?.last_paid_date 
+    ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB') 
+    : "غير محدد";
   
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
   const monthNames = ["", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -247,42 +270,15 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="إجمالي المسدَّد" value={`${Number(subscriptions.filter(s => s.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0)).toLocaleString("en-US")} د.أ`} sub={`${subscriptions.filter(s => s.status === 'paid').length} أشهر`} color={C.green}/>
+        <KPI label="الاشتراك الشهري" value="2 د.أ" sub="حسب النظام الجديد" color={C.accent}/>
         <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.gold : C.green}/>
-        <KPI label="الاشتراك الشهري" value="5 د.أ" sub="ثابت" color={C.accent}/>
+        <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ آخر سداد محسوب" color={C.purple}/>
       </div>
 
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>دفعاتك السابقة</div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>سجل الدفعات التفصيلي</div>
         {subscriptions.length === 0 ? (
-          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد سجلات دفع حتى الآن.</div>
-        ) : (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:12}}>
-            {subscriptions.map((sub, i) => {
-              const isPaid = sub.status === 'paid';
-              return (
-                <div key={i} style={{
-                  borderRadius:10,padding:"8px 4px",textAlign:"center",
-                  background: isPaid ? C.greenSoft : C.goldSoft,
-                  border:`1px solid ${isPaid ? `${C.green}40` : `${C.gold}40`}`,
-                }}>
-                  <div style={{fontSize:9,marginBottom:3, color: isPaid ? "#86efac" : C.gold}}>
-                    {monthNames[sub.subscription_month]} {sub.subscription_year}
-                  </div>
-                  <div style={{fontSize:8,fontWeight:600, color: isPaid ? C.green : C.gold}}>
-                    {isPaid ? "✓" : "متأخر"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي</div>
-        {subscriptions.length === 0 ? (
-          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات لعرضها.</div>
+          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات سابقة لعرضها.</div>
         ) : (
           subscriptions.map((r, i, arr) => (
             <div key={i} style={{
@@ -290,17 +286,17 @@ function AccountScreen({ member, token }) {
               padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
             }}>
               <div>
-                <div style={{fontSize:12,fontWeight:600,color:C.text}}>{monthNames[r.subscription_month]} {r.subscription_year}</div>
+                <div style={{fontSize:12,fontWeight:600,color:C.text}}>دفعة مالية</div>
                 <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `سُدِّد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : "غير مسدد"}
+                  {r.payment_date ? `تم الاعتماد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <Tag label={r.status === 'paid' ? "مسدَّد" : "متأخر"} color={r.status === 'paid' ? C.green : C.red}/>
+                <Tag label={"مسدَّد"} color={C.green}/>
                 <span style={{
                   fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
-                  color: r.status === 'paid' ? C.green : C.red,
-                }}>{Number(r.amount || 5).toLocaleString("en-US")} د.أ</span>
+                  color: C.green,
+                }}>{Number(r.amount || 0).toLocaleString("en-US")} د.أ</span>
               </div>
             </div>
           ))
@@ -316,7 +312,7 @@ function AccountScreen({ member, token }) {
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
             <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-              يُرجى التحويل على البنك، ثم إرفاق الإيصال بالأسفل.
+              يُرجى التحويل على البنك، ثم إرفاق الإيصال لتغطية {lateMonths} شهر/أشهر متأخرة.
             </div>
           </div>
         </div>
@@ -325,7 +321,7 @@ function AccountScreen({ member, token }) {
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          بعد إتمام التحويل البنكي، قم بإرفاق صورة الإيصال هنا لمراجعتها واعتمادها من قبل الإدارة.
+          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث الذمة وتاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة.
         </p>
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
@@ -421,8 +417,8 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications
-function AnnouncementsScreen() {
+// 4. Announcements & Notifications (Updated with DB Save)
+function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
   const [freq, setFreq] = useState("weekly");
@@ -443,9 +439,19 @@ function AnnouncementsScreen() {
     fetchAnnouncements();
   }, []);
 
-  const handleSavePreferences = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSavePreferences = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
+      await fetch(`${apiUrl}/api/member/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ whatsapp_enabled: waEnabled, email_enabled: emailEnabled, reminder_frequency: freq })
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error("خطأ في حفظ التفضيلات", err);
+    }
   };
 
   const typeColors = {
@@ -487,7 +493,7 @@ function AnnouncementsScreen() {
       </Card>
 
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>🔔 تفضيلات التنبيه (واجهة تجريبية)</div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>🔔 تفضيلات التنبيه</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
             <span style={{fontSize:18}}>📱</span>
@@ -505,37 +511,74 @@ function AnnouncementsScreen() {
   );
 }
 
-// 0. Login Screen
-function LoginScreen({ onLogin }) {
-  const [username, setUsername] = useState("");
+// 0. Auth Screen (Login & Register + OTP)
+function AuthScreen({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [step, setStep] = useState(1); // 1: Form, 2: OTP (for registration only)
+  
+  // Login State
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  
+  // Registration State
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [dob, setDob] = useState("");
+  const [maritalStatus, setMaritalStatus] = useState("Single");
+  const [otp, setOtp] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      setError("الرجاء إدخال اسم المستخدم وكلمة المرور");
-      return;
-    }
-    setLoading(true); setError("");
-
+    if (!loginPhone || !loginPass) { setError("الرجاء إدخال رقم الجوال وكلمة المرور"); return; }
+    setLoading(true); setError(""); setSuccess("");
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
       const res = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginPhone, password: loginPass })
       });
       const data = await res.json();
+      if (res.ok && data.token) onLogin(data.token, data.member || {});
+      else setError(data.error || "بيانات الدخول غير صحيحة");
+    } catch (err) { setError("تعذر الاتصال بالسيرفر. تأكد من الإنترنت."); }
+    setLoading(false);
+  };
 
-      if (res.ok && data.token) {
-        onLogin(data.token, data.member || {});
-      } else {
-        setError(data.error || "بيانات الدخول غير صحيحة");
-      }
-    } catch (err) {
-      setError("تعذر الاتصال بالسيرفر. تأكد من الإنترنت.");
-    }
+  const handleRequestOTP = async () => {
+    if (!fullName || !phone || !password || !dob) { setError("جميع الحقول الأساسية مطلوبة"); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      const res = await fetch(`${apiUrl}/auth/request-otp`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phone })
+      });
+      const data = await res.json();
+      if (res.ok) { setStep(2); setSuccess("تم إرسال رمز التحقق إلى جوالك."); }
+      else setError(data.error || "تعذر إرسال الرمز.");
+    } catch (err) { setError("تعذر الاتصال بالسيرفر."); }
+    setLoading(false);
+  };
+
+  const handleRegister = async () => {
+    if (!otp) { setError("أدخل رمز التحقق"); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      const res = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName, phone_number: phone, email, password, dob, marital_status: maritalStatus, otp })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess("تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول.");
+        setTimeout(() => { setIsLogin(true); setStep(1); setSuccess(""); }, 3000);
+      } else setError(data.error || "رمز التحقق غير صحيح");
+    } catch (err) { setError("تعذر الاتصال بالسيرفر."); }
     setLoading(false);
   };
 
@@ -545,18 +588,51 @@ function LoginScreen({ onLogin }) {
       <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
         <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
         <h2 style={{color:C.text, marginBottom:8, fontSize:22}}>صندوق عائلة قطيفان</h2>
-        <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>
-          أهلاً بك، الرجاء إدخال بيانات الدخول الخاصة بك.
-        </p>
-
+        
         {error && <div style={{color:C.red, fontSize:12, marginBottom:16, background:C.redSoft, padding:8, borderRadius:8}}>{error}</div>}
+        {success && <div style={{color:C.green, fontSize:12, marginBottom:16, background:C.greenSoft, padding:8, borderRadius:8}}>{success}</div>}
 
-        <Input type="text" placeholder="اسم المستخدم (رقم الجوال)" value={username} onChange={setUsername} />
-        <Input type="password" placeholder="كلمة المرور" value={password} onChange={setPassword} />
-
-        <Btn onClick={handleLogin} style={{width:"100%", marginTop:10}} variant="primary">
-          {loading ? "⏳ جاري التحقق..." : "تسجيل الدخول"}
-        </Btn>
+        {isLogin ? (
+          <>
+            <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>تسجيل الدخول إلى حسابك.</p>
+            <Input type="tel" placeholder="رقم الجوال" value={loginPhone} onChange={setLoginPhone} />
+            <Input type="password" placeholder="كلمة المرور" value={loginPass} onChange={setLoginPass} />
+            <Btn onClick={handleLogin} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "دخول"}</Btn>
+            <div style={{marginTop:20, fontSize:12, color:C.dim}}>
+              ليس لديك حساب؟ <span onClick={()=>setIsLogin(false)} style={{color:C.accent, cursor:"pointer", fontWeight:700}}>تسجيل جديد</span>
+            </div>
+          </>
+        ) : (
+          <>
+            {step === 1 ? (
+              <>
+                <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>إنشاء حساب عضو جديد.</p>
+                <Input type="text" placeholder="الاسم الرباعي *" value={fullName} onChange={setFullName} />
+                <Input type="tel" placeholder="رقم الجوال (هو اسم الدخول) *" value={phone} onChange={setPhone} />
+                <Input type="email" placeholder="البريد الإلكتروني (اختياري)" value={email} onChange={setEmail} />
+                <Input type="password" placeholder="كلمة المرور *" value={password} onChange={setPassword} />
+                <Input type="date" label="تاريخ الميلاد *" value={dob} onChange={setDob} />
+                <Select label="الحالة الاجتماعية" value={maritalStatus} onChange={setMaritalStatus} options={[
+                  {value:"Single", label:"أعزب / عزباء"}, {value:"Married", label:"متزوج / متزوجة"},
+                  {value:"Divorced", label:"مطلق / مطلقة"}, {value:"Widowed", label:"أرمل / أرملة"}
+                ]}/>
+                <Btn onClick={handleRequestOTP} style={{width:"100%", marginTop:10}} variant="primary">{loading ? "⏳..." : "التالي (التحقق من الرقم)"}</Btn>
+              </>
+            ) : (
+              <>
+                <p style={{color:C.dim, fontSize:13, marginBottom:24, lineHeight:1.6}}>أدخل الرمز المكون من 4 أرقام المرسل إليك.</p>
+                <Input type="number" placeholder="1234" value={otp} onChange={setOtp} />
+                <Btn onClick={handleRegister} style={{width:"100%", marginTop:10}} variant="green">{loading ? "⏳..." : "تأكيد وإنشاء الحساب"}</Btn>
+                <Btn onClick={()=>setStep(1)} style={{width:"100%", marginTop:10}} variant="ghost">رجوع</Btn>
+              </>
+            )}
+            {step === 1 && (
+              <div style={{marginTop:20, fontSize:12, color:C.dim}}>
+                لديك حساب بالفعل؟ <span onClick={()=>setIsLogin(true)} style={{color:C.accent, cursor:"pointer", fontWeight:700}}>تسجيل الدخول</span>
+              </div>
+            )}
+          </>
+        )}
       </Card>
     </div>
   );
@@ -579,7 +655,7 @@ export default function App() {
     fund: <FundScreen token={token}/>, 
     account: <AccountScreen member={member} token={token}/>, 
     request: <RequestScreen token={token}/>, 
-    notif: <AnnouncementsScreen/>
+    notif: <AnnouncementsScreen token={token}/>
   };
 
   const handleLoginSuccess = (newToken, memberData) => {
@@ -594,7 +670,7 @@ export default function App() {
     setToken(null); setMember(null);
   };
 
-  if (!token) return <LoginScreen onLogin={handleLoginSuccess} />;
+  if (!token) return <AuthScreen onLogin={handleLoginSuccess} />;
 
   return (
     <>
