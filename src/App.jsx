@@ -672,7 +672,9 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
-  const [screen, setScreen] = useState("fund");
+  
+  // تم تغيير الحالة الافتراضية هنا لتكون حسابي الشخصي (account) بدلاً من (fund)
+  const [screen, setScreen] = useState("account");
 
   const NAV = [
     {id:"fund", label:"ملخص الصندوق", icon:"🏦"},
