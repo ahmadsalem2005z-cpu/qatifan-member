@@ -199,7 +199,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (Updated to 2 JD / Last Paid Date Logic)
+// 2. My Account (Debt UI Completely Removed)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -256,10 +256,6 @@ function AccountScreen({ member, token }) {
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
 
   const activeMember = accountData || member;
-  const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
-  
-  // المنطق المالي الجديد: كل 2 دينار = شهر
-  const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   const lastPaidDate = activeMember?.last_paid_date 
     ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB') 
     : "غير محدد";
@@ -270,7 +266,6 @@ function AccountScreen({ member, token }) {
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
         <KPI label="الاشتراك الشهري" value="2 د.أ" sub="حسب النظام الجديد" color={C.accent}/>
-        <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.gold : C.green}/>
         <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ آخر سداد محسوب" color={C.purple}/>
       </div>
 
@@ -304,29 +299,14 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
-      {debt > 0 && (
-        <div style={{
-          background:C.goldSoft,border:`1px solid ${C.gold}40`,
-          borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
-        }}>
-          <span style={{fontSize:20}}>⚠️</span>
-          <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.gold}}>لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
-            <div style={{fontSize:11,color:`${C.gold}cc`,marginTop:3}}>
-              يُرجى التحويل على البنك، ثم إرفاق الإيصال لتغطية {lateMonths} شهر/أشهر متأخرة.
-            </div>
-          </div>
-        </div>
-      )}
-
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>تأكيد سداد الذمة</div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال السداد</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث الذمة وتاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة.
+          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث تاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة.
         </p>
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
-          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
+          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق صورة التحويل"}
         </Btn>
       </Card>
     </div>
@@ -418,7 +398,7 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications (Updated with DB Save)
+// 4. Announcements & Notifications
 function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
