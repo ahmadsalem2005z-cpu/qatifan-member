@@ -285,9 +285,11 @@ function AccountScreen({ member, token }) {
               padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
             }}>
               <div>
-                <div style={{fontSize:12,fontWeight:600,color:C.text}}>دفعة مالية</div>
+                <div style={{fontSize:12,fontWeight:600,color:C.text}}>
+                  تغطية شهر {r.subscription_month} / {r.subscription_year}
+                </div>
                 <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `تم الاعتماد ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}
+                  {r.payment_date ? `تاريخ الاعتماد: ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
