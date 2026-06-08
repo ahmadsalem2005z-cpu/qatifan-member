@@ -199,27 +199,13 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (With Optional Month & Year Selectors)
+// 2. My Account (Debt UI Completely Removed)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
-
-  // الخيارات الاختيارية للشهر والسنة
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-
-  const currentYear = new Date().getFullYear();
-  const months = [
-    {label: "تلقائي (تغطية الشهر التالي)", value: ""}, 
-    ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))
-  ];
-  const years = [
-    {label: "تلقائي", value: ""}, 
-    ...Array.from({length: 5}, (_, i) => ({label: String(currentYear + i), value: String(currentYear + i)}))
-  ];
 
   useEffect(() => {
     const fetchAccountData = async () => {
@@ -246,8 +232,6 @@ function AccountScreen({ member, token }) {
     
     const formData = new FormData();
     formData.append('receipt', file);
-    if (selectedMonth) formData.append('month', selectedMonth);
-    if (selectedYear) formData.append('year', selectedYear);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
@@ -258,8 +242,6 @@ function AccountScreen({ member, token }) {
       });
       if (response.ok) {
         setUploadSuccess(true);
-        setSelectedMonth("");
-        setSelectedYear("");
         setTimeout(() => setUploadSuccess(false), 3500);
       } else {
         alert("حدث خطأ أثناء الرفع");
@@ -320,18 +302,8 @@ function AccountScreen({ member, token }) {
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال السداد</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث تاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة. إذا كنت تريد تسديد شهر محدد، يمكنك اختياره من الأسفل.
+          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث تاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة.
         </p>
-
-        <div style={{display:"flex", gap:10, marginBottom: 14}}>
-          <div style={{flex:1}}>
-            <Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} />
-          </div>
-          <div style={{flex:1}}>
-            <Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} />
-          </div>
-        </div>
-
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق صورة التحويل"}
@@ -700,6 +672,8 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
+  
+  // تم تغيير الحالة الافتراضية هنا لتكون حسابي الشخصي (account) بدلاً من (fund)
   const [screen, setScreen] = useState("account");
 
   const NAV = [
