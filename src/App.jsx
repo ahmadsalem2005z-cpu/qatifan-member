@@ -199,7 +199,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (Fully matches your exact requirements)
+// 2. My Account
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,7 +282,6 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       
-      {/* 1. KPIs Section: Subscription Fee, Total Paid, Outstanding Debt */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:12}}>
         <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
         <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
@@ -294,7 +293,6 @@ function AccountScreen({ member, token }) {
         />
       </div>
 
-      {/* 2. Warning Banner (Only visible if there is outstanding debt) */}
       {debt > 0 && (
         <div style={{
           background:C.redSoft,border:`1px solid ${C.red}40`,
@@ -310,7 +308,6 @@ function AccountScreen({ member, token }) {
         </div>
       )}
 
-      {/* 3. Account Statement / Visual List of Previous Payments */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
         {subscriptions.length === 0 ? (
@@ -343,7 +340,6 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
-      {/* 4. Upload Transfer Receipt Button */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
@@ -453,7 +449,7 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications
+// 4. Announcements & Notifications (تحديث لاستقبال الإعلانات المخصصة)
 function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
@@ -467,13 +463,16 @@ function AnnouncementsScreen({ token }) {
     const fetchAnnouncements = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        const res = await fetch(`${apiUrl}/api/announcements`);
+        // إضافة الهيدر هنا لضمان معرفة السيرفر بهوية العضو وجلب الإعلانات المخصصة له
+        const res = await fetch(`${apiUrl}/api/announcements`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (res.ok) setAnnouncements(await res.json());
       } catch (err) { console.error("خطأ:", err); } 
       finally { setLoading(false); }
     };
     fetchAnnouncements();
-  }, []);
+  }, [token]);
 
   const handleSavePreferences = async () => {
     try {
