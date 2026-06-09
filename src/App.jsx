@@ -147,6 +147,7 @@ function FundScreen({ token }) {
   const paidPct = summary?.paidPct ?? 0;
   const paidCount = summary?.paidCount ?? 0;
   const expectedCount = summary?.expectedCount ?? 0;
+  const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; // The new dynamic global debt
   const expensesList = summary?.recentExpenses || [];
 
   return (
@@ -154,7 +155,7 @@ function FundScreen({ token }) {
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
         <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
         <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
-        <KPI label="المصروف هذا العام" value={`${Number(totalExpenses).toLocaleString("en-US")} د.أ`} sub="حسب السجلات" color={C.purple}/>
+        <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
       </div>
 
       <Card>
@@ -449,7 +450,7 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications (تحديث لاستقبال الإعلانات المخصصة)
+// 4. Announcements & Notifications
 function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
@@ -463,7 +464,6 @@ function AnnouncementsScreen({ token }) {
     const fetchAnnouncements = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        // إضافة الهيدر هنا لضمان معرفة السيرفر بهوية العضو وجلب الإعلانات المخصصة له
         const res = await fetch(`${apiUrl}/api/announcements`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -546,16 +546,14 @@ function AnnouncementsScreen({ token }) {
   );
 }
 
-// 0. Auth Screen (Login, Register & Forgot Password)
+// 0. Auth Screen
 function AuthScreen({ onLogin }) {
-  const [view, setView] = useState("login"); // "login", "register", "forgot"
-  const [step, setStep] = useState(1); // 1: Form/Phone, 2: OTP
+  const [view, setView] = useState("login");
+  const [step, setStep] = useState(1);
   
-  // Login State
   const [loginPhone, setLoginPhone] = useState("");
   const [loginPass, setLoginPass] = useState("");
   
-  // Registration State
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -564,7 +562,6 @@ function AuthScreen({ onLogin }) {
   const [maritalStatus, setMaritalStatus] = useState("Single");
   const [otp, setOtp] = useState("");
 
-  // Forgot Password State
   const [forgotPhone, setForgotPhone] = useState("");
   const [forgotOtp, setForgotOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");

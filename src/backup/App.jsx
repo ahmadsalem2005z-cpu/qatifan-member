@@ -199,13 +199,26 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (Debt UI Completely Removed)
+// 2. My Account
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
+
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+
+  const currentYear = new Date().getFullYear();
+  const months = [
+    {label: "تلقائي (تغطية الشهر التالي)", value: ""}, 
+    ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))
+  ];
+  const years = [
+    {label: "تلقائي", value: ""}, 
+    ...Array.from({length: 5}, (_, i) => ({label: String(currentYear + i), value: String(currentYear + i)}))
+  ];
 
   useEffect(() => {
     const fetchAccountData = async () => {
@@ -232,6 +245,8 @@ function AccountScreen({ member, token }) {
     
     const formData = new FormData();
     formData.append('receipt', file);
+    if (selectedMonth) formData.append('month', selectedMonth);
+    if (selectedYear) formData.append('year', selectedYear);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
@@ -242,6 +257,8 @@ function AccountScreen({ member, token }) {
       });
       if (response.ok) {
         setUploadSuccess(true);
+        setSelectedMonth("");
+        setSelectedYear("");
         setTimeout(() => setUploadSuccess(false), 3500);
       } else {
         alert("حدث خطأ أثناء الرفع");
@@ -256,57 +273,91 @@ function AccountScreen({ member, token }) {
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
 
   const activeMember = accountData || member;
-  const lastPaidDate = activeMember?.last_paid_date 
-    ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB') 
-    : "غير محدد";
+  const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
+  const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   
-  const subscriptions = accountData?.subscriptions?.filter(s => s !== null) || [];
+  const subscriptions = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
+  const totalPaid = subscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12}}>
-        <KPI label="الاشتراك الشهري" value="2 د.أ" sub="حسب النظام الجديد" color={C.accent}/>
-        <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ آخر سداد محسوب" color={C.purple}/>
+      
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:12}}>
+        <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
+        <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
+        <KPI 
+          label="الذمة المستحقة" 
+          value={`${Number(debt).toLocaleString("en-US")} د.أ`} 
+          sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} 
+          color={debt > 0 ? C.red : C.green}
+        />
       </div>
 
-      <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>سجل الدفعات التفصيلي</div>
-        {subscriptions.length === 0 ? (
-          <div style={{fontSize:12, color:C.dim, textAlign:"center"}}>لا توجد حركات سابقة لعرضها.</div>
-        ) : (
-          subscriptions.map((r, i, arr) => (
-            <div key={i} style={{
-              display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"10px 0",borderBottom: i < arr.length-1 ? `1px solid ${C.border}`:"none",
-            }}>
-              <div>
-                <div style={{fontSize:12,fontWeight:600,color:C.text}}>
-                  تغطية شهر {r.subscription_month} / {r.subscription_year}
-                </div>
-                <div style={{fontSize:10,color:C.muted,marginTop:1}}>
-                  {r.payment_date ? `تاريخ الاعتماد: ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}
-                </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <Tag label={"مسدَّد"} color={C.green}/>
-                <span style={{
-                  fontSize:12,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
-                  color: C.green,
-                }}>{Number(r.amount || 0).toLocaleString("en-US")} د.أ</span>
-              </div>
+      {debt > 0 && (
+        <div style={{
+          background:C.redSoft,border:`1px solid ${C.red}40`,
+          borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",
+        }}>
+          <span style={{fontSize:20}}>⚠️</span>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,color:C.red}}>تنبيه: لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
+            <div style={{fontSize:11,color:`${C.red}cc`,marginTop:3}}>
+              يُرجى المبادرة بتحويل المبلغ المستحق لتغطية {lateMonths} شهر/أشهر متأخرة، وإرفاق الإيصال أدناه.
             </div>
-          ))
+          </div>
+        </div>
+      )}
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
+        {subscriptions.length === 0 ? (
+          <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div>
+        ) : (
+          <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
+            {subscriptions.slice().reverse().map((r, i) => (
+              <div key={i} style={{
+                display:"flex",justifyContent:"space-between",alignItems:"center",
+                padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}`
+              }}>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:C.text}}>
+                    تغطية اشتراك شهر {r.subscription_month} / {r.subscription_year}
+                  </div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:2}}>
+                    {r.payment_date ? `تم الدفع في: ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}
+                  </div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <Tag label={"مسدَّد"} color={C.green}/>
+                  <span style={{
+                    fontSize:13,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace",
+                    color: C.green,
+                  }}>{Number(r.amount || 0).toLocaleString("en-US")} د.أ</span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </Card>
 
       <Card>
-        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال السداد</div>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>
-          قم بإرفاق صورة الإيصال البنكي هنا. سيقوم النظام تلقائياً بتحديث تاريخ "آخر تغطية" فور اعتماد المبلغ من الإدارة.
+          قم برفع صورة أو ملف الإيصال البنكي الخاص بك لتوثيق الدفعة. يمكنك تحديد الشهر والسنة لتخصيص الدفعة، أو تركها لتُحسب تلقائياً للشهر التالي.
         </p>
+
+        <div style={{display:"flex", gap:10, marginBottom: 14}}>
+          <div style={{flex:1}}>
+            <Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} />
+          </div>
+          <div style={{flex:1}}>
+            <Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} />
+          </div>
+        </div>
+
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
-          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق صورة التحويل"}
+          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
         </Btn>
       </Card>
     </div>
@@ -398,7 +449,7 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications
+// 4. Announcements & Notifications (تحديث لاستقبال الإعلانات المخصصة)
 function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
@@ -412,13 +463,16 @@ function AnnouncementsScreen({ token }) {
     const fetchAnnouncements = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
-        const res = await fetch(`${apiUrl}/api/announcements`);
+        // إضافة الهيدر هنا لضمان معرفة السيرفر بهوية العضو وجلب الإعلانات المخصصة له
+        const res = await fetch(`${apiUrl}/api/announcements`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (res.ok) setAnnouncements(await res.json());
       } catch (err) { console.error("خطأ:", err); } 
       finally { setLoading(false); }
     };
     fetchAnnouncements();
-  }, []);
+  }, [token]);
 
   const handleSavePreferences = async () => {
     try {
@@ -672,8 +726,6 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
-  
-  // تم تغيير الحالة الافتراضية هنا لتكون حسابي الشخصي (account) بدلاً من (fund)
   const [screen, setScreen] = useState("account");
 
   const NAV = [
