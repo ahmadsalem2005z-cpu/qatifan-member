@@ -112,7 +112,7 @@ function Select({ label, value, onChange, options }) {
 
 // ── SCREENS ───────────────────────────────────────────────────────────────
 
-// 1. Fund Summary
+// 1. Fund Summary (This perfectly matches your requirement)
 function FundScreen({ token }) {
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -207,7 +207,6 @@ function AccountScreen({ member, token }) {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // الخيارات الاختيارية للشهر والسنة
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
 
@@ -700,6 +699,8 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
+  
+  // ⬇️ هنا جعلت حسابي الشخصي هو الصفحة الافتراضية
   const [screen, setScreen] = useState("account");
 
   const NAV = [
