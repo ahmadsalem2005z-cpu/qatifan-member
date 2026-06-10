@@ -200,7 +200,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (Restored Last Paid Date KPI)
+// 2. My Account (الواجهة المحدثة مع 4 مربعات للبيانات)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -277,7 +277,6 @@ function AccountScreen({ member, token }) {
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
   const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   
-  // استعادة تاريخ السداد وتنسيقه ليكون واضحاً
   const lastPaidDate = activeMember?.last_paid_date 
     ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB', { month: '2-digit', year: 'numeric' }) 
     : "غير محدد";
@@ -288,7 +287,7 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       
-      {/* ⬇️ تم إعادة مؤشر "تاريخ آخر تغطية" هنا ليكون 4 مربعات متكاملة */}
+      {/* ⬇️ هنا المربعات الأربعة مصطفة بانتظام */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
         <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
         <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
