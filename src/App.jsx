@@ -147,7 +147,7 @@ function FundScreen({ token }) {
   const paidPct = summary?.paidPct ?? 0;
   const paidCount = summary?.paidCount ?? 0;
   const expectedCount = summary?.expectedCount ?? 0;
-  const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; // The new dynamic global debt
+  const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; 
   const expensesList = summary?.recentExpenses || [];
 
   return (
@@ -211,14 +211,15 @@ function AccountScreen({ member, token }) {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
 
-  const currentYear = new Date().getFullYear();
   const months = [
     {label: "تلقائي (تغطية الشهر التالي)", value: ""}, 
     ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))
   ];
+  
+  // تحديث قائمة السنوات لتبدأ من 1990 إلى 2040
   const years = [
     {label: "تلقائي", value: ""}, 
-    ...Array.from({length: 5}, (_, i) => ({label: String(currentYear + i), value: String(currentYear + i)}))
+    ...Array.from({length: 2040 - 1990 + 1}, (_, i) => ({label: String(1990 + i), value: String(1990 + i)}))
   ];
 
   useEffect(() => {
