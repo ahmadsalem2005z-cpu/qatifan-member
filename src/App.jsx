@@ -200,7 +200,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account
+// 2. My Account (Restored Last Paid Date KPI)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -216,7 +216,6 @@ function AccountScreen({ member, token }) {
     ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))
   ];
   
-  // تحديث قائمة السنوات لتبدأ من 1990 إلى 2040
   const years = [
     {label: "تلقائي", value: ""}, 
     ...Array.from({length: 2040 - 1990 + 1}, (_, i) => ({label: String(1990 + i), value: String(1990 + i)}))
@@ -278,13 +277,19 @@ function AccountScreen({ member, token }) {
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
   const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   
+  // استعادة تاريخ السداد وتنسيقه ليكون واضحاً
+  const lastPaidDate = activeMember?.last_paid_date 
+    ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB', { month: '2-digit', year: 'numeric' }) 
+    : "غير محدد";
+
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
   const totalPaid = subscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:12}}>
+      {/* ⬇️ تم إعادة مؤشر "تاريخ آخر تغطية" هنا ليكون 4 مربعات متكاملة */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
         <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
         <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
         <KPI 
@@ -293,6 +298,7 @@ function AccountScreen({ member, token }) {
           sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} 
           color={debt > 0 ? C.red : C.green}
         />
+        <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ سريان الاشتراك" color={C.purple}/>
       </div>
 
       {debt > 0 && (
