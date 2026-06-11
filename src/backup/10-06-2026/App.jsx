@@ -81,8 +81,6 @@ function Input({ label, value, onChange, type="text", placeholder, textarea, row
     borderRadius:10, color:C.text, fontSize:13,
     fontFamily:"'Tajawal',sans-serif", outline:"none",
     resize: textarea?"vertical":undefined,
-    textAlign: "right", // 💡 تم إضافة المحاذاة لليمين هنا
-    direction: "rtl"    // 💡 فرض الاتجاه العربي
   };
   return (
     <div style={{marginBottom:14}}>
@@ -101,8 +99,6 @@ function Select({ label, value, onChange, options }) {
     background:C.surf2, border:`1px solid ${C.border}`,
     borderRadius:10, color:C.text, fontSize:13,
     fontFamily:"'Tajawal',sans-serif", outline:"none",
-    textAlign: "right", // 💡 تم إضافة المحاذاة لليمين هنا
-    direction: "rtl"
   };
   return (
     <div style={{marginBottom:14}}>
@@ -204,7 +200,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account
+// 2. My Account (الواجهة المحدثة مع 4 مربعات للبيانات)
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -291,6 +287,7 @@ function AccountScreen({ member, token }) {
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       
+      {/* ⬇️ هنا المربعات الأربعة مصطفة بانتظام */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
         <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
         <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
