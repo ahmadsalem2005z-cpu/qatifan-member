@@ -83,30 +83,39 @@ function FundScreen({ token }) {
 
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
 
+  const balance = summary?.balance ?? 0;
+  const activeMembersCount = summary?.activeMembers ?? 0;
+  const totalExpenses = summary?.totalExpenses ?? 0;
+  const paidPct = summary?.paidPct ?? 0;
+  const paidCount = summary?.paidCount ?? 0;
+  const expectedCount = summary?.expectedCount ?? 0;
+  const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; 
+  const expensesList = summary?.recentExpenses || [];
+
   return (
     <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value={`${Number(summary?.balance??0).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
-        <KPI label="إجمالي الأعضاء" value={summary?.activeMembers??0} sub="عضو نشط" color={C.accent}/>
-        <KPI label="إجمالي الديون" value={`${Number(summary?.totalUnpaidDebt??0).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
+        <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
+        <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
+        <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
       </div>
 
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — الشهر الحالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{summary?.paidCount??0} من {summary?.expectedCount??0} عضواً سدّدوا هذا الشهر</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} عضواً سدّدوا هذا الشهر</div>
           </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{summary?.paidPct??0}%</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
-        <div style={{height:8,background:C.surf2,borderRadius:99}}><div style={{width:`${Math.min(summary?.paidPct??0, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/></div>
+        <div style={{height:8,background:C.surf2,borderRadius:99}}><div style={{width:`${Math.min(paidPct, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/></div>
       </Card>
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>آخر المصروفات</div>
-        {(summary?.recentExpenses||[]).length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:10}}>لا توجد مصروفات مسجلة حتى الآن.</div> : (
-          (summary?.recentExpenses||[]).map((e,i)=>(
-            <div key={i} style={{ display:"flex",alignItems:"center",gap:12, padding:"10px 0",borderBottom: i<(summary?.recentExpenses.length-1)?`1px solid ${C.border}`:"none" }}>
+        {expensesList.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:10}}>لا توجد مصروفات مسجلة حتى الآن.</div> : (
+          expensesList.map((e,i)=>(
+            <div key={i} style={{ display:"flex",alignItems:"center",gap:12, padding:"10px 0",borderBottom: i<(expensesList.length-1)?`1px solid ${C.border}`:"none" }}>
               <span style={{fontSize:20,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center", background:e.cat==="wedding"?C.purpleSoft:e.cat==="condolence"?C.surf2:C.goldSoft, borderRadius:10}}>{e.icon}</span>
               <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{e.label}</div><div style={{fontSize:10,color:C.muted,marginTop:2}}>{e.date}</div></div>
               <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple:e.cat==="condolence"?C.dim:C.gold, fontFamily:"'IBM Plex Mono',monospace"}}>{Number(e.amount).toLocaleString("en-US")} د.أ</div>
@@ -118,7 +127,7 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account (مع محرك إصدار الـ PDF)
+// 2. My Account
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,7 +138,6 @@ function AccountScreen({ member, token }) {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
 
-  // 💡 متغيرات كشف الحساب
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
@@ -165,7 +173,6 @@ function AccountScreen({ member, token }) {
     } catch (error) { alert("تعذر الاتصال بالسيرفر."); } finally { setIsUploading(false); }
   };
 
-  // 💡 دالة جلب كشف الحساب والطباعة
   const generateStatementPDF = async () => {
     setIsGenerating(true);
     try {
@@ -179,7 +186,7 @@ function AccountScreen({ member, token }) {
         const data = await res.json();
         setStatementData(data);
         setShowStatementModal(false);
-        setTimeout(() => window.print(), 500); // إعطاء الواجهة فرصة للبناء قبل استدعاء نافذة الطباعة
+        setTimeout(() => window.print(), 500); 
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
     setIsGenerating(false);
@@ -196,7 +203,6 @@ function AccountScreen({ member, token }) {
 
   return (
     <>
-      {/* 💡 نافذة الـ PDF الوهمية (تظهر فقط عند الطباعة) */}
       {statementData && (
         <div className="print-only">
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", borderBottom:"2px solid #333", paddingBottom:20, marginBottom:30}}>
@@ -205,7 +211,6 @@ function AccountScreen({ member, token }) {
               <h2 style={{margin:"5px 0 0", color:"#555", fontSize:18}}>كشف حساب العضو: {statementData.member.full_name}</h2>
               <div style={{fontSize:12, color:"#888", marginTop:8}}>تاريخ الإصدار: {new Date().toLocaleString('ar-JO')}</div>
             </div>
-            {/* توليد الباركود ديناميكياً */}
             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${statementData.member.phone_number}`} alt="QR Verification" />
           </div>
 
@@ -215,7 +220,6 @@ function AccountScreen({ member, token }) {
             <div><strong style={{color:"#555"}}>إجمالي المدفوعات بالفترة:</strong> {statementData.total_paid_in_period} د.أ</div>
           </div>
 
-          {/* 💡 إذا كانت الذمة صفر، يتم إصدار براءة ذمة رسمية */}
           {parseFloat(statementData.member.total_debt) === 0 ? (
             <div style={{border:"2px dashed #10b981", background:"#ecfdf5", padding:30, textAlign:"center", borderRadius:12, marginBottom:40}}>
               <h2 style={{color:"#047857", margin:0, fontSize:24}}>✅ شهادة براءة ذمة مالية</h2>
@@ -262,7 +266,6 @@ function AccountScreen({ member, token }) {
         
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
           <h2 style={{fontSize:18, color:C.text}}>حسابي الشخصي</h2>
-          {/* 💡 زر استخراج كشف الحساب */}
           <Btn onClick={() => setShowStatementModal(true)} variant="purple" small>📄 كشف الحساب (PDF)</Btn>
         </div>
 
@@ -316,7 +319,6 @@ function AccountScreen({ member, token }) {
           </Btn>
         </Card>
 
-        {/* 💡 نافذة اختيار تواريخ الكشف */}
         {showStatementModal && (
           <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20}}>
             <Card style={{width:"100%", maxWidth:360}}>
@@ -629,8 +631,8 @@ export default function App() {
   return (
     <>
       <style>{G}</style>
-      <div className="no-print" style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",direction:"rtl",fontFamily:"'Tajawal',sans-serif"}}>
-        <header style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+      <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",direction:"rtl",fontFamily:"'Tajawal',sans-serif"}}>
+        <header className="no-print" style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:38,height:38,borderRadius:50,background:C.accentSoft,border:`2px solid ${C.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.accent}}>
               {member?.full_name ? member.full_name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
@@ -647,7 +649,7 @@ export default function App() {
           <div key={screen}>{SCREENS[screen]}</div>
         </main>
 
-        <nav style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
+        <nav className="no-print" style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setScreen(n.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",color: screen===n.id?C.accent:C.muted,padding:"4px 12px",borderRadius:10,transition:"all .15s",minWidth:60}}>
               <span style={{fontSize:20}}>{n.icon}</span>
