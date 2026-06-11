@@ -11,11 +11,22 @@ const G = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .anim{animation:fadeUp .3s ease both}
   
-  /* 💡 أكواد الطباعة السحرية (Print Engine) */
+  /* 💡 أكواد الطباعة السحرية (Print Engine) المحسنة */
   @media print {
+    @page { margin: 15mm; }
+    body, html { background: #ffffff !important; color: #000000 !important; }
     .no-print { display: none !important; }
-    .print-only { display: block !important; position: absolute; inset: 0; background: white; color: black; z-index: 9999; padding: 40px; font-family:'Tajawal',sans-serif; direction:rtl; min-height:100vh; }
-    body { background: white; margin: 0; padding: 0; }
+    .print-only { 
+      display: block !important; 
+      position: absolute; 
+      left: 0; top: 0; 
+      width: 100%; 
+      background: white !important; 
+      color: black !important; 
+      z-index: 9999; 
+      font-family:'Tajawal',sans-serif; 
+      direction:rtl; 
+    }
   }
   @media screen {
     .print-only { display: none !important; }
@@ -186,7 +197,7 @@ function AccountScreen({ member, token }) {
         const data = await res.json();
         setStatementData(data);
         setShowStatementModal(false);
-        setTimeout(() => window.print(), 500); 
+        setTimeout(() => window.print(), 800); // إعطاء الواجهة وقتاً إضافياً للبناء قبل الطباعة
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
     setIsGenerating(false);
@@ -631,7 +642,10 @@ export default function App() {
   return (
     <>
       <style>{G}</style>
+      {/* 💡 أزلت كلاس no-print من الحاوية الرئيسية لكي يعمل الـ PDF! */}
       <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",direction:"rtl",fontFamily:"'Tajawal',sans-serif"}}>
+        
+        {/* 💡 وضعت كلاس no-print على المكونات التي أريد إخفاءها فقط */}
         <header className="no-print" style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:38,height:38,borderRadius:50,background:C.accentSoft,border:`2px solid ${C.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.accent}}>
