@@ -58,6 +58,7 @@ function Select({ label, value, onChange, options }) {
 function FundScreen({ token }) {
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [donorTab, setDonorTab] = useState("year"); // 💡 'year' أو 'allTime' لتشغيل المنافسة
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -80,39 +81,56 @@ function FundScreen({ token }) {
   const expectedCount = summary?.expectedCount ?? 0;
   const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; 
   const expensesList = summary?.recentExpenses || [];
-  const topDonors = summary?.topDonors || [];
+  
+  // القوائم المنفصلة الموردة من التحديث الجديد للسيرفر
+  const topDonorsYear = summary?.topDonorsYear || [];
+  const topDonorsAllTime = summary?.topDonorsAllTime || [];
+  
+  const currentActiveDonors = donorTab === "year" ? topDonorsYear : topDonorsAllTime;
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       
-      {/* 💡 لوحة الشرف (كبار الداعمين) أصبحت الآن في قمة الصفحة تماماً كما طلبت */}
-      {topDonors.length > 0 && (
+      {/* 💡 لوحة الشرف المحدثة بقسمين تفاعليين لمضاعفة الحماس العائلي */}
+      {(topDonorsYear.length > 0 || topDonorsAllTime.length > 0) && (
         <Card style={{borderTop:`3px solid ${C.gold}`, borderBottom:`1px solid ${C.border}`}}>
-          <div style={{fontSize:15,fontWeight:800,color:C.gold,marginBottom:14, display:"flex", alignItems:"center", gap:8}}>
-            <span>🏆</span> لوحة الشرف - كبار الداعمين
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+            <div style={{fontSize:15,fontWeight:800,color:C.gold, display:"flex", alignItems:"center", gap:6}}>
+              <span>🏆</span> لوحة الشرف والمنافسة العائلية
+            </div>
+            {/* أزرار التنقل السريع */}
+            <div style={{display:"flex", background:C.surf2, borderRadius:8, padding:2, border:`1px solid ${C.border}`}}>
+              <button onClick={() => setDonorTab("year")} style={{background: donorTab==="year"?C.gold:"transparent", color: donorTab==="year"?"#0b0f1a":C.dim, border:"none", padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", transition:"all .2s"}}>العام الحالي 📅</button>
+              <button onClick={() => setDonorTab("allTime")} style={{background: donorTab==="allTime"?C.gold:"transparent", color: donorTab==="allTime"?"#0b0f1a":C.dim, border:"none", padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", transition:"all .2s"}}>كل الأوقات 🌟</button>
+            </div>
           </div>
+
           <div style={{display:"flex", flexDirection:"column", gap:10}}>
-            {topDonors.map((donor, i) => {
-              const icons = ["🥇", "🥈", "🥉", "🏅", "🏅"];
-              const colors = [C.gold, "#94a3b8", "#b45309", C.accent, C.accent];
-              return (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:C.surf2, padding:"12px", borderRadius:12, border:`1px solid ${C.border}`}}>
-                  <span style={{fontSize:24}}>{icons[i]}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13, fontWeight:700, color:C.text}}>{donor.name}</div>
-                    <div style={{fontSize:11, color:C.muted, marginTop:2}}>إجمالي التبرعات للصندوق</div>
+            {currentActiveDonors.length === 0 ? (
+              <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:15}}>لا توجد تبرعات مسجلة في هذا القسم حتى الآن.</div>
+            ) : (
+              currentActiveDonors.map((donor, i) => {
+                const icons = ["🥇", "🥈", "🥉", "🏅", "🏅"];
+                const colors = [C.gold, "#94a3b8", "#b45309", C.accent, C.accent];
+                return (
+                  <div key={i} className="anim" style={{ display:"flex", alignItems:"center", gap:12, background:C.surf2, padding:"12px", borderRadius:12, border:`1px solid ${C.border}`}}>
+                    <span style={{fontSize:24}}>{icons[i]}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13, fontWeight:700, color:C.text}}>{donor.name}</div>
+                      <div style={{fontSize:11, color:C.muted, marginTop:2}}>{donorTab === "year" ? "إيراد تبرعات عام " + new Date().getFullYear() : "إجمالي تبرعات تراكمي تاريخي"}</div>
+                    </div>
+                    <div style={{fontSize:16, fontWeight:800, color:colors[i], fontFamily:"'IBM Plex Mono',monospace"}}>
+                      {Number(donor.amount).toLocaleString("en-US")} د.أ
+                    </div>
                   </div>
-                  <div style={{fontSize:16, fontWeight:800, color:colors[i], fontFamily:"'IBM Plex Mono',monospace"}}>
-                    {Number(donor.amount).toLocaleString("en-US")} د.أ
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </Card>
       )}
 
-      {/* بطاقات المؤشرات المالية تلي لوحة الشرف */}
+      {/* بطاقات المؤشرات المالية تلي لوحة الشرف مباشرة */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
         <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
         <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
@@ -137,7 +155,7 @@ function FundScreen({ token }) {
             <div key={i} style={{ display:"flex",alignItems:"center",gap:12, padding:"10px 0",borderBottom: i<(expensesList.length-1)?`1px solid ${C.border}`:"none" }}>
               <span style={{fontSize:20,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center", background:e.cat==="wedding"?C.purpleSoft:e.cat==="condolence"?C.surf2:C.goldSoft, borderRadius:10}}>{e.icon}</span>
               <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{e.label}</div><div style={{fontSize:10,color:C.muted,marginTop:2}}>{e.date}</div></div>
-              <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple?e.cat==="condolence"?C.dim:C.gold, fontFamily:"'IBM Plex Mono',monospace"}}>{Number(e.amount).toLocaleString("en-US")} د.أ</div>
+              <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple:e.cat==="condolence"?C.dim:C.gold, fontFamily:"'IBM Plex Mono',monospace"}}>{Number(e.amount).toLocaleString("en-US")} د.أ</div>
             </div>
           ))
         )}
@@ -349,7 +367,7 @@ function AccountScreen({ member, token }) {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
-        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>قم برفع صورة أو ملف الإيصال البنكي الخاص بك لتوثيق الدفعة. يمكنك تحديد الشهر والسنة لتخصيص الدفعة، أو تركها لتُحسب تلقائياً للشهر التالي.</p>
+        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>قم برفع صورة أو ملف الإيصال البنكي الخاص بك لتوثيق الدفعة. يمكنك تحديد الشهر والسنة لتخصيص الدفعة, أو تركها لتُحسب تلقائياً للشهر التالي.</p>
         <div style={{display:"flex", gap:10, marginBottom: 14}}>
           <div style={{flex:1}}><Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} /></div>
           <div style={{flex:1}}><Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} /></div>
@@ -482,7 +500,7 @@ function AnnouncementsScreen({ token }) {
             const tc = typeColors[a.type] || typeColors.update;
             const isOpen = expanded === a.id;
             return (
-              <div key={a.id} style={{background:tc.bg,border:`1px solid ${tc.border}40`,borderRadius:12,padding:14,marginBottom:10,cursor:"pointer"}} onClick={()=>setExpanded(isOpen?null:a.id)}>
+              <div key={a.id} style={{background:tc.bg,border:`1px solid ${tc.border}40`,borderRadius:12,padding:14,marginBottom:10,cursor:"pointer"} } onClick={()=>setExpanded(isOpen?null:a.id)}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
                   <div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1}}>
                     <span style={{fontSize:20,flexShrink:0}}>{tc.icon}</span>
