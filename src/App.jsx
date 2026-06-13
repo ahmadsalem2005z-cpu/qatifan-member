@@ -10,30 +10,8 @@ const G = `
   ::-webkit-scrollbar-thumb{background:#2a3a5c;border-radius:3px}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .anim{animation:fadeUp .3s ease both}
-  
-  /* 💡 أكواد الطباعة السحرية (Print Engine) المحسنة */
-  @media print {
-    @page { margin: 15mm; }
-    body, html { background: #ffffff !important; color: #000000 !important; }
-    .no-print { display: none !important; }
-    .print-only { 
-      display: block !important; 
-      position: absolute; 
-      left: 0; top: 0; 
-      width: 100%; 
-      background: white !important; 
-      color: black !important; 
-      z-index: 9999; 
-      font-family:'Tajawal',sans-serif; 
-      direction:rtl; 
-    }
-  }
-  @media screen {
-    .print-only { display: none !important; }
-  }
 `;
 
-// ── Design tokens ─────────────────────────────────────────────────────────
 const C = {
   bg:"#0b0f1a", surf:"#111827", surf2:"#1a2235",
   border:"#1e2d44", accent:"#3b82f6", accentSoft:"#1d3557",
@@ -102,15 +80,17 @@ function FundScreen({ token }) {
   const expectedCount = summary?.expectedCount ?? 0;
   const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; 
   const expensesList = summary?.recentExpenses || [];
+  
+  // 💡 استخراج كبار المتبرعين
+  const topDonors = summary?.topDonors || [];
 
   return (
-    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
         <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
         <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
         <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
       </div>
-
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
@@ -121,6 +101,33 @@ function FundScreen({ token }) {
         </div>
         <div style={{height:8,background:C.surf2,borderRadius:99}}><div style={{width:`${Math.min(paidPct, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/></div>
       </Card>
+
+      {/* 💡 لوحة الشرف (كبار الداعمين) */}
+      {topDonors.length > 0 && (
+        <Card style={{borderTop:`3px solid ${C.gold}`}}>
+          <div style={{fontSize:15,fontWeight:800,color:C.gold,marginBottom:14, display:"flex", alignItems:"center", gap:8}}>
+            <span>🏆</span> لوحة الشرف - كبار الداعمين
+          </div>
+          <div style={{display:"flex", flexDirection:"column", gap:10}}>
+            {topDonors.map((donor, i) => {
+              const icons = ["🥇", "🥈", "🥉", "🏅", "🏅"];
+              const colors = [C.gold, "#94a3b8", "#b45309", C.accent, C.accent];
+              return (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:C.surf2, padding:"12px", borderRadius:12, border:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:24}}>{icons[i]}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13, fontWeight:700, color:C.text}}>{donor.name}</div>
+                    <div style={{fontSize:11, color:C.muted, marginTop:2}}>إجمالي التبرعات للصندوق</div>
+                  </div>
+                  <div style={{fontSize:16, fontWeight:800, color:colors[i], fontFamily:"'IBM Plex Mono',monospace"}}>
+                    {Number(donor.amount).toLocaleString("en-US")} د.أ
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>آخر المصروفات</div>
@@ -152,7 +159,6 @@ function AccountScreen({ member, token }) {
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
-  const [statementData, setStatementData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const months = [{label: "تلقائي (تغطية الشهر التالي)", value: ""}, ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))];
@@ -195,9 +201,92 @@ function AccountScreen({ member, token }) {
       const res = await fetch(`${apiUrl}/api/member/statement?${queryParams.toString()}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setStatementData(data);
         setShowStatementModal(false);
-        setTimeout(() => window.print(), 800); // إعطاء الواجهة وقتاً إضافياً للبناء قبل الطباعة
+        
+        const printWindow = window.open('', '_blank');
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
+        
+        const htmlContent = `
+          <html dir="rtl">
+            <head>
+              <title>كشف حساب العضو - ${data.member.full_name}</title>
+              <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+              <style>
+                body { font-family: 'Tajawal', sans-serif; padding: 40px; color: #111827; background: #fff; }
+                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #334155; padding-bottom: 20px; margin-bottom: 30px; }
+                .title-section h1 { margin: 0; font-size: 28px; color: #1e2d44; }
+                .title-section h2 { margin: 5px 0 0; color: #475569; font-size: 18px; }
+                .title-section p { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+                .summary-box { display: flex; gap: 30px; margin-bottom: 30px; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+                .summary-item strong { color: #475569; display: block; margin-bottom: 5px; font-size: 14px; }
+                .summary-item span { font-size: 16px; font-weight: bold; color: #0f172a; }
+                .status-clear { border: 2px dashed #10b981; background: #ecfdf5; padding: 30px; text-align: center; border-radius: 12px; margin-bottom: 40px; }
+                .status-clear h2 { color: #047857; margin: 0 0 10px; font-size: 24px; }
+                .status-debt { border: 2px dashed #ef4444; background: #fef2f2; padding: 20px; text-align: center; border-radius: 12px; margin-bottom: 40px; }
+                .status-debt h2 { color: #b91c1c; margin: 0 0 10px; font-size: 24px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+                th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
+                th { background: #f1f5f9; color: #334155; font-size: 14px; }
+                td { font-size: 14px; }
+                .footer { text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <div class="title-section">
+                  <h1>صندوق عائلة قطيفان</h1>
+                  <h2>كشف حساب العضو: ${data.member.full_name}</h2>
+                  <p>تاريخ الإصدار: ${new Date().toLocaleString('ar-JO')}</p>
+                </div>
+                <img src="${qrCodeUrl}" alt="QR Code" width="100" height="100" />
+              </div>
+
+              <div class="summary-box">
+                <div class="summary-item"><strong>رقم الجوال:</strong> <span>${data.member.phone_number}</span></div>
+                <div class="summary-item"><strong>الفرع/الفخذ:</strong> <span>${data.member.family_branch}</span></div>
+                <div class="summary-item"><strong>إجمالي المدفوعات بالفترة:</strong> <span style="color:#10b981;">${data.total_paid_in_period} د.أ</span></div>
+              </div>
+
+              ${parseFloat(data.member.total_debt) === 0 
+                ? `<div class="status-clear">
+                    <h2>✅ شهادة براءة ذمة مالية</h2>
+                    <p style="color:#065f46; margin:0; font-size:15px;">يشهد صندوق عائلة قطيفان بأن العضو المذكور أعلاه قد سدد جميع التزاماته المالية للصندوق ولا توجد عليه أي ذمم مستحقة حتى تاريخه.</p>
+                   </div>`
+                : `<div class="status-debt">
+                    <h2>⚠️ ذمم مالية مستحقة</h2>
+                    <p style="color:#991b1b; margin:0; font-size:15px;">يوجد على العضو المذكور التزامات مالية غير مسددة بقيمة <strong>${data.member.total_debt} دينار أردني</strong>.</p>
+                   </div>`
+              }
+
+              <h3 style="color:#1e2d44; margin-bottom:15px;">سجل الحركات المعتمدة (خلال الفترة المحددة)</h3>
+              <table>
+                <thead>
+                  <tr><th>التاريخ</th><th>التغطية</th><th>المبلغ (د.أ)</th></tr>
+                </thead>
+                <tbody>
+                  ${data.payments.length === 0 
+                    ? `<tr><td colspan="3" style="text-align:center; color:#64748b;">لا توجد دفعات معتمدة في هذه الفترة</td></tr>` 
+                    : data.payments.map(p => `<tr><td>${new Date(p.payment_date).toLocaleDateString('en-GB')}</td><td>تغطية شهر ${p.subscription_month} / ${p.subscription_year}</td><td style="font-weight:bold; color:#10b981;">${p.amount} د.أ</td></tr>`).join('')
+                  }
+                </tbody>
+              </table>
+
+              <div class="footer">
+                هذا الكشف مُصدَر إلكترونياً ولا يحتاج لختم، ويمكن التحقق من مصداقيته عبر مسح الرمز المرفق (QR).
+              </div>
+            </body>
+          </html>
+        `;
+        
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+          printWindow.close();
+        }, 1200);
+
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
     setIsGenerating(false);
@@ -213,139 +302,78 @@ function AccountScreen({ member, token }) {
   const totalPaid = subscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
   return (
-    <>
-      {statementData && (
-        <div className="print-only">
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", borderBottom:"2px solid #333", paddingBottom:20, marginBottom:30}}>
-            <div>
-              <h1 style={{margin:0, fontSize:28}}>صندوق عائلة قطيفان</h1>
-              <h2 style={{margin:"5px 0 0", color:"#555", fontSize:18}}>كشف حساب العضو: {statementData.member.full_name}</h2>
-              <div style={{fontSize:12, color:"#888", marginTop:8}}>تاريخ الإصدار: {new Date().toLocaleString('ar-JO')}</div>
-            </div>
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${statementData.member.phone_number}`} alt="QR Verification" />
-          </div>
+    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
+      
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <h2 style={{fontSize:18, color:C.text}}>حسابي الشخصي</h2>
+        <Btn onClick={() => setShowStatementModal(true)} variant="purple" small>📄 كشف الحساب (PDF)</Btn>
+      </div>
 
-          <div style={{display:"flex", gap:30, marginBottom:30, padding:20, background:"#f9fafb", borderRadius:8}}>
-            <div><strong style={{color:"#555"}}>رقم الجوال:</strong> {statementData.member.phone_number}</div>
-            <div><strong style={{color:"#555"}}>الفرع/الفخذ:</strong> {statementData.member.family_branch}</div>
-            <div><strong style={{color:"#555"}}>إجمالي المدفوعات بالفترة:</strong> {statementData.total_paid_in_period} د.أ</div>
-          </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
+        <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
+        <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
+        <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.red : C.green}/>
+        <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ سريان الاشتراك" color={C.purple}/>
+      </div>
 
-          {parseFloat(statementData.member.total_debt) === 0 ? (
-            <div style={{border:"2px dashed #10b981", background:"#ecfdf5", padding:30, textAlign:"center", borderRadius:12, marginBottom:40}}>
-              <h2 style={{color:"#047857", margin:0, fontSize:24}}>✅ شهادة براءة ذمة مالية</h2>
-              <p style={{color:"#065f46", marginTop:10, fontSize:14}}>يشهد صندوق عائلة قطيفان بأن العضو المذكور أعلاه قد سدد جميع التزاماته المالية للصندوق ولا توجد عليه أي ذمم مستحقة حتى تاريخه.</p>
-            </div>
-          ) : (
-            <div style={{border:"2px dashed #ef4444", background:"#fef2f2", padding:20, textAlign:"center", borderRadius:12, marginBottom:40}}>
-              <h2 style={{color:"#b91c1c", margin:0, fontSize:20}}>⚠️ ذمم مالية مستحقة</h2>
-              <p style={{color:"#991b1b", marginTop:10, fontSize:14}}>يوجد على العضو المذكور التزامات مالية غير مسددة بقيمة <strong>{statementData.member.total_debt} دينار أردني</strong>.</p>
-            </div>
-          )}
-
-          <h3 style={{borderBottom:"1px solid #ddd", paddingBottom:10}}>سجل الحركات المعتمدة (خلال الفترة)</h3>
-          <table style={{width:"100%", borderCollapse:"collapse", marginBottom:40}}>
-            <thead>
-              <tr style={{background:"#f5f5f5"}}>
-                <th style={{border:"1px solid #ccc", padding:10, textAlign:"right"}}>التاريخ</th>
-                <th style={{border:"1px solid #ccc", padding:10, textAlign:"right"}}>التغطية</th>
-                <th style={{border:"1px solid #ccc", padding:10, textAlign:"right"}}>المبلغ (د.أ)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {statementData.payments.length === 0 ? (
-                <tr><td colSpan={3} style={{padding:10, textAlign:"center", border:"1px solid #ccc"}}>لا توجد دفعات معتمدة في هذه الفترة</td></tr>
-              ) : (
-                statementData.payments.map((p, idx) => (
-                  <tr key={idx}>
-                    <td style={{border:"1px solid #ccc", padding:10}}>{new Date(p.payment_date).toLocaleDateString('en-GB')}</td>
-                    <td style={{border:"1px solid #ccc", padding:10}}>تغطية شهر {p.subscription_month} / {p.subscription_year}</td>
-                    <td style={{border:"1px solid #ccc", padding:10, fontWeight:"bold"}}>{p.amount} د.أ</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          <div style={{textAlign:"center", fontSize:12, color:"#999", borderTop:"1px solid #eee", paddingTop:20}}>
-            هذا الكشف مُصدَر إلكترونياً ولا يحتاج لختم، ويمكن التحقق منه عبر مسح الرمز المرفق (QR).
+      {debt > 0 && (
+        <div style={{ background:C.redSoft,border:`1px solid ${C.red}40`, borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
+          <span style={{fontSize:20}}>⚠️</span>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,color:C.red}}>تنبيه: لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
+            <div style={{fontSize:11,color:`${C.red}cc`,marginTop:3}}>يُرجى المبادرة بتحويل المبلغ المستحق لتغطية {lateMonths} شهر/أشهر متأخرة، وإرفاق الإيصال أدناه.</div>
           </div>
         </div>
       )}
 
-      {/* ── الواجهة العادية ── */}
-      <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
-        
-        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-          <h2 style={{fontSize:18, color:C.text}}>حسابي الشخصي</h2>
-          <Btn onClick={() => setShowStatementModal(true)} variant="purple" small>📄 كشف الحساب (PDF)</Btn>
-        </div>
-
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
-          <KPI label="الاشتراك الشهري" value="2 د.أ" sub="مبلغ ثابت" color={C.accent}/>
-          <KPI label="إجمالي المسدد" value={`${Number(totalPaid).toLocaleString("en-US")} د.أ`} sub="مجموع دفعاتك" color={C.green}/>
-          <KPI label="الذمة المستحقة" value={`${Number(debt).toLocaleString("en-US")} د.أ`} sub={lateMonths > 0 ? `${lateMonths} شهر متأخر` : "ملتزم بالسداد"} color={debt > 0 ? C.red : C.green}/>
-          <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ سريان الاشتراك" color={C.purple}/>
-        </div>
-
-        {debt > 0 && (
-          <div style={{ background:C.redSoft,border:`1px solid ${C.red}40`, borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
-            <span style={{fontSize:20}}>⚠️</span>
-            <div>
-              <div style={{fontSize:13,fontWeight:600,color:C.red}}>تنبيه: لديك ذمم متأخرة بقيمة {Number(debt).toLocaleString("en-US")} د.أ</div>
-              <div style={{fontSize:11,color:`${C.red}cc`,marginTop:3}}>يُرجى المبادرة بتحويل المبلغ المستحق لتغطية {lateMonths} شهر/أشهر متأخرة، وإرفاق الإيصال أدناه.</div>
-            </div>
-          </div>
-        )}
-
-        <Card>
-          <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
-          {subscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
-            <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
-              {subscriptions.slice().reverse().map((r, i) => (
-                <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}` }}>
-                  <div>
-                    <div style={{fontSize:12,fontWeight:600,color:C.text}}>تغطية اشتراك شهر {r.subscription_month} / {r.subscription_year}</div>
-                    <div style={{fontSize:10,color:C.muted,marginTop:2}}>{r.payment_date ? `تم الدفع في: ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}</div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <Tag label={"مسدَّد"} color={C.green}/>
-                    <span style={{ fontSize:13,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace", color: C.green }}>{Number(r.amount || 0).toLocaleString("en-US")} د.أ</span>
-                  </div>
+      <Card>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
+        {subscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
+          <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
+            {subscriptions.slice().reverse().map((r, i) => (
+              <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}` }}>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:C.text}}>تغطية اشتراك شهر {r.subscription_month} / {r.subscription_year}</div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:2}}>{r.payment_date ? `تم الدفع في: ${new Date(r.payment_date).toLocaleDateString('en-GB')}` : ""}</div>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
-          <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>قم برفع صورة أو ملف الإيصال البنكي الخاص بك لتوثيق الدفعة. يمكنك تحديد الشهر والسنة لتخصيص الدفعة، أو تركها لتُحسب تلقائياً للشهر التالي.</p>
-          <div style={{display:"flex", gap:10, marginBottom: 14}}>
-            <div style={{flex:1}}><Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} /></div>
-            <div style={{flex:1}}><Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} /></div>
-          </div>
-          <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
-          <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
-            {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
-          </Btn>
-        </Card>
-
-        {showStatementModal && (
-          <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20}}>
-            <Card style={{width:"100%", maxWidth:360}}>
-              <h3 style={{marginBottom:8, color:C.text}}>إصدار كشف حساب (PDF)</h3>
-              <p style={{fontSize:12, color:C.muted, marginBottom:20}}>سيتم دمج شهادة "براءة ذمة" في التقرير إذا كان رصيدك مُسدداً بالكامل.</p>
-              <Input label="من تاريخ (اختياري)" type="date" value={stmtStart} onChange={setStmtStart} />
-              <Input label="إلى تاريخ (اختياري)" type="date" value={stmtEnd} onChange={setStmtEnd} />
-              <div style={{display:"flex", gap:10, marginTop:10}}>
-                <Btn style={{flex:1}} variant="primary" onClick={generateStatementPDF}>{isGenerating ? "⏳ جاري المعالجة..." : "إصدار وطباعة"}</Btn>
-                <Btn style={{flex:1}} variant="ghost" onClick={() => setShowStatementModal(false)}>إلغاء</Btn>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <Tag label={"مسدَّد"} color={C.green}/>
+                  <span style={{ fontSize:13,fontWeight:700,fontFamily:"'IBM Plex Mono',monospace", color: C.green }}>{Number(r.amount || 0).toLocaleString("en-US")} د.أ</span>
+                </div>
               </div>
-            </Card>
+            ))}
           </div>
         )}
-      </div>
-    </>
+      </Card>
+
+      <Card>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
+        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>قم برفع صورة أو ملف الإيصال البنكي الخاص بك لتوثيق الدفعة. يمكنك تحديد الشهر والسنة لتخصيص الدفعة، أو تركها لتُحسب تلقائياً للشهر التالي.</p>
+        <div style={{display:"flex", gap:10, marginBottom: 14}}>
+          <div style={{flex:1}}><Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} /></div>
+          <div style={{flex:1}}><Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} /></div>
+        </div>
+        <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
+        <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
+          {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال بنجاح" : "📤 إرفاق إيصال التحويل"}
+        </Btn>
+      </Card>
+
+      {showStatementModal && (
+        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20}}>
+          <Card style={{width:"100%", maxWidth:360}}>
+            <h3 style={{marginBottom:8, color:C.text}}>إصدار كشف حساب (PDF)</h3>
+            <p style={{fontSize:12, color:C.muted, marginBottom:20}}>سيتم دمج شهادة "براءة ذمة" في التقرير إذا كان رصيدك مُسدداً بالكامل.</p>
+            <Input label="من تاريخ (اختياري)" type="date" value={stmtStart} onChange={setStmtStart} />
+            <Input label="إلى تاريخ (اختياري)" type="date" value={stmtEnd} onChange={setStmtEnd} />
+            <div style={{display:"flex", gap:10, marginTop:10}}>
+              <Btn style={{flex:1}} variant="primary" onClick={generateStatementPDF}>{isGenerating ? "⏳ جاري المعالجة..." : "إصدار وطباعة"}</Btn>
+              <Btn style={{flex:1}} variant="ghost" onClick={() => setShowStatementModal(false)}>إلغاء</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -376,7 +404,7 @@ function RequestScreen({ token }) {
 
   if (submitted) {
     return (
-      <div className="anim no-print">
+      <div className="anim">
         <Card style={{textAlign:"center",padding:40}}>
           <div style={{fontSize:48,marginBottom:16}}>✅</div>
           <div style={{fontSize:18,fontWeight:700,color:C.green,marginBottom:8}}>تم إرسال طلبك بنجاح</div>
@@ -388,7 +416,7 @@ function RequestScreen({ token }) {
   }
 
   return (
-    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>نوع الطلب</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -445,7 +473,7 @@ function AnnouncementsScreen({ token }) {
   const typeColors = { meeting: {bg:"#1d3557", border:"#3b82f6", icon:"📅"}, honor: {bg:"#2d2006", border:"#f59e0b", icon:"🏆"}, update: {bg:"#1e1040", border:"#a78bfa", icon:"📢"}, condolence: {bg:C.surf2, border:C.border, icon:"🕊️"} };
 
   return (
-    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>📣 إعلانات العائلة الحية</div>
         {loading ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:20}}>⏳ جاري التحميل...</div> : announcements.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:20}}>لا توجد إعلانات حالياً.</div> : (
@@ -461,7 +489,7 @@ function AnnouncementsScreen({ token }) {
                   </div>
                   <span style={{color:C.muted,fontSize:14,flexShrink:0,marginTop:2}}>{isOpen?"▲":"▼"}</span>
                 </div>
-                {isOpen && <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${tc.border}30`,fontSize:12,color:C.dim,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
+                {isOpen && <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${tc.border}30`,fontSize:12,color:C.text,lineHeight:1.8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
               </div>
             );
           })
@@ -545,7 +573,7 @@ function AuthScreen({ onLogin }) {
   };
 
   return (
-    <div className="anim no-print" style={{minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"}}>
+    <div className="anim" style={{minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"}}>
       <style>{G}</style>
       <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
         <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
@@ -609,7 +637,7 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
-  const [screen, setScreen] = useState("account");
+  const [screen, setScreen] = useState("fund"); // جعلنا الملخص هو الشاشة الافتراضية
 
   const NAV = [
     {id:"fund", label:"ملخص الصندوق", icon:"🏦"},
@@ -642,11 +670,8 @@ export default function App() {
   return (
     <>
       <style>{G}</style>
-      {/* 💡 أزلت كلاس no-print من الحاوية الرئيسية لكي يعمل الـ PDF! */}
       <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",direction:"rtl",fontFamily:"'Tajawal',sans-serif"}}>
-        
-        {/* 💡 وضعت كلاس no-print على المكونات التي أريد إخفاءها فقط */}
-        <header className="no-print" style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+        <header style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:38,height:38,borderRadius:50,background:C.accentSoft,border:`2px solid ${C.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.accent}}>
               {member?.full_name ? member.full_name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
@@ -663,7 +688,7 @@ export default function App() {
           <div key={screen}>{SCREENS[screen]}</div>
         </main>
 
-        <nav className="no-print" style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
+        <nav style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setScreen(n.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",color: screen===n.id?C.accent:C.muted,padding:"4px 12px",borderRadius:10,transition:"all .15s",minWidth:60}}>
               <span style={{fontSize:20}}>{n.icon}</span>
