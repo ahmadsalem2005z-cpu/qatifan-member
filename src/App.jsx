@@ -92,9 +92,8 @@ function FundScreen({ token }) {
       
       {(topDonorsYear.length > 0 || topDonorsAllTime.length > 0) && (
         <Card style={{borderTop:`3px solid ${C.gold}`, borderBottom:`1px solid ${C.border}`}}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+          <div style={{display:"flex", justifyIntent:"space-between", alignItems:"center", marginBottom:14, justifyContent: "space-between"}}>
             <div style={{fontSize:15,fontWeight:800,color:C.gold, display:"flex", alignItems:"center", gap:6}}>
-              {/* 💡 تم التعديل هنا إلى "لوحة الشرف (المتبرعين)" */}
               <span>🏆</span> لوحة الشرف (المتبرعين)
             </div>
             <div style={{display:"flex", background:C.surf2, borderRadius:8, padding:2, border:`1px solid ${C.border}`}}>
@@ -134,11 +133,12 @@ function FundScreen({ token }) {
         <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
       </div>
 
+      {/* 💡 تعديل نصوص مؤشر الالتزام لتطابق منطق الاستعلام الجديد في تطبيق الأعضاء */}
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — الشهر الحالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} عضواً سدّدوا هذا الشهر</div>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>مؤشر الالتزام المالي</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ملتزمون بالسداد (بدون ذمم)</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -515,7 +515,7 @@ function AnnouncementsScreen({ token }) {
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:16}}>🔔 تفضيلات التنبيه</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:10,alignItems:"center"}}><span style={{fontSize:18}}>📱</span><div><div style={{fontSize:13,fontWeight:600,color:C.text}}>واتساب</div></div></div>
-          <div onClick={()=>setWa(!waEnabled)} style={{width:44,height:24,borderRadius:12,cursor:"pointer",background: waEnabled?"#25D366":C.surf2,position:"relative",transition:"all .2s"}}><div style={{width:18,height:18,borderRadius:9,background:"#fff",position:"absolute",top:2,right: waEnabled?2:22,transition:"right .2s"}}/></div>
+          <div onClick={()=>setWa(!waEnabled)} style={{width:44,height:24,borderRadius:12,cursor:"pointer",background: waEnabled?"#25D366":C.surf2,position:"relative",transition:"all .2s"} }><div style={{width:18,height:18,borderRadius:9,background:"#fff",position:"absolute",top:2,right: waEnabled?2:22,transition:"right .2s"}}/></div>
         </div>
         <Btn onClick={handleSavePreferences} style={{width:"100%", marginTop:16}} variant={saved ? "green" : "primary"}>{saved ? "✅ تم حفظ التفضيلات" : "💾 حفظ"}</Btn>
       </Card>
