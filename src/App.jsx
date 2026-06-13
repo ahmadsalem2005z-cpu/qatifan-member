@@ -80,31 +80,14 @@ function FundScreen({ token }) {
   const expectedCount = summary?.expectedCount ?? 0;
   const totalUnpaidDebt = summary?.totalUnpaidDebt ?? 0; 
   const expensesList = summary?.recentExpenses || [];
-  
-  // 💡 استخراج كبار المتبرعين
   const topDonors = summary?.topDonors || [];
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
-        <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
-        <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
-      </div>
-      <Card>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div>
-            <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — الشهر الحالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} عضواً سدّدوا هذا الشهر</div>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
-        </div>
-        <div style={{height:8,background:C.surf2,borderRadius:99}}><div style={{width:`${Math.min(paidPct, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/></div>
-      </Card>
-
-      {/* 💡 لوحة الشرف (كبار الداعمين) */}
+      
+      {/* 💡 لوحة الشرف (كبار الداعمين) أصبحت الآن في قمة الصفحة تماماً كما طلبت */}
       {topDonors.length > 0 && (
-        <Card style={{borderTop:`3px solid ${C.gold}`}}>
+        <Card style={{borderTop:`3px solid ${C.gold}`, borderBottom:`1px solid ${C.border}`}}>
           <div style={{fontSize:15,fontWeight:800,color:C.gold,marginBottom:14, display:"flex", alignItems:"center", gap:8}}>
             <span>🏆</span> لوحة الشرف - كبار الداعمين
           </div>
@@ -129,6 +112,24 @@ function FundScreen({ token }) {
         </Card>
       )}
 
+      {/* بطاقات المؤشرات المالية تلي لوحة الشرف */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
+        <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
+        <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
+        <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
+      </div>
+
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>الالتزام الشهري — الشهر الحالي</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} عضواً سدّدوا هذا الشهر</div>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
+        </div>
+        <div style={{height:8,background:C.surf2,borderRadius:99}}><div style={{width:`${Math.min(paidPct, 100)}%`,height:"100%",background:C.green,borderRadius:99}}/></div>
+      </Card>
+
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>آخر المصروفات</div>
         {expensesList.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:10}}>لا توجد مصروفات مسجلة حتى الآن.</div> : (
@@ -136,7 +137,7 @@ function FundScreen({ token }) {
             <div key={i} style={{ display:"flex",alignItems:"center",gap:12, padding:"10px 0",borderBottom: i<(expensesList.length-1)?`1px solid ${C.border}`:"none" }}>
               <span style={{fontSize:20,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center", background:e.cat==="wedding"?C.purpleSoft:e.cat==="condolence"?C.surf2:C.goldSoft, borderRadius:10}}>{e.icon}</span>
               <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:C.text}}>{e.label}</div><div style={{fontSize:10,color:C.muted,marginTop:2}}>{e.date}</div></div>
-              <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple:e.cat==="condolence"?C.dim:C.gold, fontFamily:"'IBM Plex Mono',monospace"}}>{Number(e.amount).toLocaleString("en-US")} د.أ</div>
+              <div style={{fontSize:13,fontWeight:700,color:e.cat==="wedding"?C.purple?e.cat==="condolence"?C.dim:C.gold, fontFamily:"'IBM Plex Mono',monospace"}}>{Number(e.amount).toLocaleString("en-US")} د.أ</div>
             </div>
           ))
         )}
@@ -637,7 +638,7 @@ function AuthScreen({ onLogin }) {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
-  const [screen, setScreen] = useState("fund"); // جعلنا الملخص هو الشاشة الافتراضية
+  const [screen, setScreen] = useState("fund");
 
   const NAV = [
     {id:"fund", label:"ملخص الصندوق", icon:"🏦"},
