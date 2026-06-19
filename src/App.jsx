@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 
-// ── Global styles ─────────────────────────────────────────────────────────
 const G = `
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
@@ -39,9 +38,7 @@ function Btn({ children, variant="primary", onClick, small, style={} }) {
   return <button onClick={onClick} style={{ ...v[variant], borderRadius:10, cursor:"pointer", fontFamily:"'Tajawal',sans-serif", fontWeight:600, padding: small?"6px 14px":"10px 20px", fontSize: small?12:13, transition:"all .18s", ...style }}>{children}</button>;
 }
 
-function Tag({ label, color=C.accent }) {
-  return <span style={{ background:`${color}20`, color, border:`1px solid ${color}40`, borderRadius:6, padding:"2px 10px", fontSize:11, fontWeight:700 }}>{label}</span>;
-}
+function Tag({ label, color=C.accent }) { return <span style={{ background:`${color}20`, color, border:`1px solid ${color}40`, borderRadius:6, padding:"2px 10px", fontSize:11, fontWeight:700 }}>{label}</span>; }
 
 function Input({ label, value, onChange, type="text", placeholder, textarea, rows=3 }) {
   const s = { width:"100%", padding:"10px 14px", background:C.surf2, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, fontSize:13, fontFamily:"'Tajawal',sans-serif", outline:"none", resize: textarea?"vertical":undefined, textAlign: "right", direction: "rtl" };
@@ -52,8 +49,6 @@ function Select({ label, value, onChange, options }) {
   const s = { width:"100%", padding:"10px 14px", background:C.surf2, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, fontSize:13, fontFamily:"'Tajawal',sans-serif", outline:"none", textAlign: "right", direction: "rtl" };
   return <div style={{marginBottom:14}}>{label && <label style={{display:"block",fontSize:12,color:C.dim,marginBottom:5,fontWeight:500}}>{label}</label>}<select style={s} value={value} onChange={e=>onChange(e.target.value)}>{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>;
 }
-
-// ── SCREENS ───────────────────────────────────────────────────────────────
 
 function FundScreen({ token }) {
   const [summary, setSummary] = useState(null);
@@ -74,6 +69,8 @@ function FundScreen({ token }) {
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
 
   const balance = summary?.balance ?? 0;
+  const totalSubs = summary?.totalSubs ?? 0;
+  const totalDons = summary?.totalDons ?? 0;
   const activeMembersCount = summary?.activeMembers ?? 0;
   const totalExpenses = summary?.totalExpenses ?? 0;
   const paidPct = summary?.paidPct ?? 0;
@@ -84,7 +81,6 @@ function FundScreen({ token }) {
   
   const topDonorsYear = summary?.topDonorsYear || [];
   const topDonorsAllTime = summary?.topDonorsAllTime || [];
-  
   const currentActiveDonors = donorTab === "year" ? topDonorsYear : topDonorsAllTime;
 
   return (
@@ -101,7 +97,6 @@ function FundScreen({ token }) {
               <button onClick={() => setDonorTab("allTime")} style={{background: donorTab==="allTime"?C.gold:"transparent", color: donorTab==="allTime"?"#0b0f1a":C.dim, border:"none", padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", transition:"all .2s"}}>كل الأوقات 🌟</button>
             </div>
           </div>
-
           <div style={{display:"flex", flexDirection:"column", gap:10}}>
             {currentActiveDonors.length === 0 ? (
               <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:15}}>لا توجد تبرعات مسجلة في هذا القسم حتى الآن.</div>
@@ -127,17 +122,20 @@ function FundScreen({ token }) {
         </Card>
       )}
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
-        <KPI label="رصيد الصندوق" value={`${Number(balance).toLocaleString("en-US")} د.أ`} sub="محدّث اليوم" color={C.green}/>
-        <KPI label="إجمالي الأعضاء" value={activeMembersCount} sub="عضو نشط" color={C.accent}/>
-        <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
+        <KPI label="الرصيد المتاح" value={`${Number(balance).toLocaleString("en-US")} د.أ`} color={C.green}/>
+        <KPI label="الديون المتأخرة" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} color={C.red}/>
+        <KPI label="إيرادات الاشتراكات" value={`${Number(totalSubs).toLocaleString("en-US")} د.أ`} color={C.accent}/>
+        <KPI label="إيرادات التبرعات" value={`${Number(totalDons).toLocaleString("en-US")} د.أ`} color={C.gold}/>
+        <KPI label="إجمالي المصروفات" value={`${Number(totalExpenses).toLocaleString("en-US")} د.أ`} color={C.purple}/>
+        <KPI label="الأعضاء النشطين" value={activeMembersCount} color={C.muted}/>
       </div>
 
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>مؤشر الالتزام المالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ملتزمون بالسداد (بدون ذمم)</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون أو اشتراكات متأخرة</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -160,7 +158,6 @@ function FundScreen({ token }) {
   );
 }
 
-// 2. My Account
 function AccountScreen({ member, token }) {
   const [accountData, setAccountData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -219,7 +216,6 @@ function AccountScreen({ member, token }) {
         setShowStatementModal(false);
         
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
-        
         const htmlContent = `
           <html dir="rtl">
             <head>
@@ -294,7 +290,6 @@ function AccountScreen({ member, token }) {
 
         let printIframe = document.getElementById("pdf-print-iframe");
         if (printIframe) printIframe.remove();
-
         printIframe = document.createElement("iframe");
         printIframe.id = "pdf-print-iframe";
         printIframe.style.position = "absolute";
@@ -304,7 +299,6 @@ function AccountScreen({ member, token }) {
         printIframe.style.visibility = "hidden";
         
         document.body.appendChild(printIframe);
-
         const iframeDoc = printIframe.contentWindow.document;
         iframeDoc.open();
         iframeDoc.write(htmlContent);
@@ -314,7 +308,6 @@ function AccountScreen({ member, token }) {
           printIframe.contentWindow.focus();
           printIframe.contentWindow.print();
         }, 800);
-
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
     setIsGenerating(false);
@@ -327,12 +320,9 @@ function AccountScreen({ member, token }) {
   const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   const lastPaidDate = activeMember?.last_paid_date ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB', { month: '2-digit', year: 'numeric' }) : "غير محدد";
   
-  // 💡 التعديل المحوري: فرز الاشتراكات تنازلياً (الأحدث أولاً) بشكل قطعي في الواجهة
   const subscriptionsRaw = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
   const sortedSubscriptions = [...subscriptionsRaw].sort((a, b) => {
-    if (b.subscription_year !== a.subscription_year) {
-      return b.subscription_year - a.subscription_year;
-    }
+    if (b.subscription_year !== a.subscription_year) return b.subscription_year - a.subscription_year;
     return b.subscription_month - a.subscription_month;
   });
 
@@ -367,7 +357,6 @@ function AccountScreen({ member, token }) {
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
         {sortedSubscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
           <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
-            {/* 💡 استخدام المصفوفة المفروزة تنازلياً بشكل قطعي هنا */}
             {sortedSubscriptions.map((r, i) => (
               <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}` }}>
                 <div>
@@ -415,7 +404,6 @@ function AccountScreen({ member, token }) {
   );
 }
 
-// 3. Request
 function RequestScreen({ token }) {
   const [type, setType] = useState("loan");
   const [amount, setAmount] = useState("");
@@ -479,7 +467,6 @@ function RequestScreen({ token }) {
   );
 }
 
-// 4. Announcements & Notifications
 function AnnouncementsScreen({ token }) {
   const [waEnabled, setWa] = useState(true);
   const [emailEnabled, setEmail] = useState(false);
@@ -545,7 +532,6 @@ function AnnouncementsScreen({ token }) {
   );
 }
 
-// 0. Auth Screen
 function AuthScreen({ onLogin }) {
   const [view, setView] = useState("login");
   const [step, setStep] = useState(1);
@@ -671,7 +657,6 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
@@ -737,4 +722,6 @@ export default function App() {
       </div>
     </>
   );
+}
+}
 }
