@@ -165,16 +165,10 @@ function AccountScreen({ member, token }) {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const months = [{label: "تلقائي (تغطية الشهر التالي)", value: ""}, ...Array.from({length: 12}, (_, i) => ({label: String(i + 1), value: String(i + 1)}))];
-  const years = [{label: "تلقائي", value: ""}, ...Array.from({length: 2040 - 1990 + 1}, (_, i) => ({label: String(1990 + i), value: String(1990 + i)}))];
 
   useEffect(() => {
     const fetchAccountData = async () => {
@@ -193,12 +187,11 @@ function AccountScreen({ member, token }) {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('receipt', file);
-    if (selectedMonth) formData.append('month', selectedMonth);
-    if (selectedYear) formData.append('year', selectedYear);
+    // تم إزالة إضافة الشهر والسنة يدوياً من هنا
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
       const response = await fetch(`${apiUrl}/api/upload-receipt`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
-      if (response.ok) { setUploadSuccess(true); setSelectedMonth(""); setSelectedYear(""); setTimeout(() => setUploadSuccess(false), 3500); } else alert("حدث خطأ أثناء الرفع");
+      if (response.ok) { setUploadSuccess(true); setTimeout(() => setUploadSuccess(false), 3500); } else alert("حدث خطأ أثناء الرفع");
     } catch (error) { alert("تعذر الاتصال بالسيرفر."); } finally { setIsUploading(false); }
   };
 
@@ -217,7 +210,6 @@ function AccountScreen({ member, token }) {
         
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
         
-        // 💡 تحديث نصوص PDF إلى اللهجة الفلاحية الموثوقة والمحفزة
         const htmlContent = `
           <html dir="rtl">
             <head>
@@ -345,13 +337,12 @@ function AccountScreen({ member, token }) {
         <KPI label="تاريخ آخر تغطية" value={lastPaidDate} sub="تاريخ سريان الاشتراك" color={C.purple}/>
       </div>
 
-      {/* 💡 تحذير الديون بالطابع الفلاحي */}
       {debt > 0 && (
         <div style={{ background:C.redSoft,border:`1px solid ${C.red}40`, borderRadius:14,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start" }}>
           <span style={{fontSize:20}}>⚠️</span>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.red}}>يا قرابتنا، معلّق بذمتك للصندوق {Number(debt).toLocaleString("en-US")} دينار</div>
-            <div style={{fontSize:11,color:`${C.red}cc`,marginTop:3}}>يا ريت تفزع وتستعجل بتسديد المبلغ لتغطية {lateMonths} شهر/أشهر متأخرة تانظل كتف بكتف، وارفق الوصل من هان.</div>
+            <div style={{fontSize:11,color:`${C.red}cc`,marginTop:3}}>يا ريت تفزع وتستعجل بتسديد المبلغ لتغطية {lateMonths} شهر متأخرة تانظل كتف بكتف، وارفق الوصل من هان.</div>
           </div>
         </div>
       )}
@@ -378,11 +369,8 @@ function AccountScreen({ member, token }) {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
-        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>ارفع صورة أو ملف الإيصال البنكي هان عشان نوثق الدفعة. بتقدر تختار الشهر والسنة المحددة، أو تخليها تنحسب تلقائي للشهر الجاي.</p>
-        <div style={{display:"flex", gap:10, marginBottom: 14}}>
-          <div style={{flex:1}}><Select label="الشهر (اختياري)" value={selectedMonth} onChange={setSelectedMonth} options={months} /></div>
-          <div style={{flex:1}}><Select label="السنة (اختياري)" value={selectedYear} onChange={setSelectedYear} options={years} /></div>
-        </div>
+        <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>ارفع صورة الإيصال البنكي هان عشان نوثق الدفعة. النظام لحاله بحسب الأشهر وبسدد المتأخرات أو بمدد اشتراكك تلقائياً بناءً على المبلغ المودع، ريح راسك.</p>
+        
         <input type="file" accept="image/*,.pdf" style={{display: 'none'}} ref={fileInputRef} onChange={handleUpload} />
         <Btn onClick={() => fileInputRef.current.click()} style={{width:"100%"}} variant={uploadSuccess ? "green" : "primary"}>
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال، عاشوا" : "📤 إرفاق إيصال التحويل"}
@@ -431,7 +419,6 @@ function RequestScreen({ token }) {
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); } finally { setIsSubmitting(false); }
   };
 
-  // 💡 رسالة النجاح بلهجة فلاحية
   if (submitted) {
     return (
       <div className="anim">
