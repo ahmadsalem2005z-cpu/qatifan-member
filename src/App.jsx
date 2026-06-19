@@ -122,6 +122,7 @@ function FundScreen({ token }) {
         </Card>
       )}
 
+      {/* هنا الشبكة السداسية الشفافة للإحصائيات */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:12}}>
         <KPI label="الرصيد المتاح" value={`${Number(balance).toLocaleString("en-US")} د.أ`} color={C.green}/>
         <KPI label="الديون المتأخرة" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} color={C.red}/>
@@ -722,6 +723,4 @@ export default function App() {
       </div>
     </>
   );
-}
-}
 }
