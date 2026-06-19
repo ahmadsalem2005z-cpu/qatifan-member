@@ -133,7 +133,6 @@ function FundScreen({ token }) {
         <KPI label="إجمالي الديون" value={`${Number(totalUnpaidDebt).toLocaleString("en-US")} د.أ`} sub="ديون غير مسددة" color={C.red}/>
       </div>
 
-      {/* 💡 تعديل نصوص مؤشر الالتزام لتطابق منطق الاستعلام الجديد في تطبيق الأعضاء */}
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
@@ -223,8 +222,10 @@ function AccountScreen({ member, token }) {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
         
         const htmlContent = `
+          <!DOCTYPE html>
           <html dir="rtl">
             <head>
+              <meta charset="utf-8">
               <title>كشف حساب العضو - ${data.member.full_name}</title>
               <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
               <style>
@@ -290,18 +291,23 @@ function AccountScreen({ member, token }) {
               <div class="footer">
                 هذا الكشف مُصدَر إلكترونياً ولا يحتاج لختم، ويمكن التحقق من مصداقيته عبر مسح الرمز المرفق (QR).
               </div>
+
+              <script>
+                window.onload = function() {
+                  setTimeout(function() {
+                    window.print();
+                  }, 500);
+                };
+                window.onafterprint = function() {
+                  window.close();
+                };
+              </script>
             </body>
           </html>
         `;
         
         printWindow.document.write(htmlContent);
         printWindow.document.close();
-        
-        setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
-          printWindow.close();
-        }, 1200);
 
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
@@ -312,6 +318,7 @@ function AccountScreen({ member, token }) {
 
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
+  // عملية حسابية تقريبية لعدد الأشهر للعرض فقط
   const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   const lastPaidDate = activeMember?.last_paid_date ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB', { month: '2-digit', year: 'numeric' }) : "غير محدد";
   const subscriptions = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
@@ -344,9 +351,9 @@ function AccountScreen({ member, token }) {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
-        {subscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
+        {subscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات السابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
           <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
-            {subscriptions.slice().reverse().map((r, i) => (
+            {subscriptions.map((r, i) => (
               <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}` }}>
                 <div>
                   <div style={{fontSize:12,fontWeight:600,color:C.text}}>تغطية اشتراك شهر {r.subscription_month} / {r.subscription_year}</div>
