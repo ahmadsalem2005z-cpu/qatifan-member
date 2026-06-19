@@ -221,10 +221,8 @@ function AccountScreen({ member, token }) {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
         
         const htmlContent = `
-          <!DOCTYPE html>
           <html dir="rtl">
             <head>
-              <meta charset="utf-8">
               <title>كشف حساب العضو - ${data.member.full_name}</title>
               <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
               <style>
@@ -294,15 +292,11 @@ function AccountScreen({ member, token }) {
           </html>
         `;
 
-        // 💡 الحل الجذري النهائي باستخدام Iframe مخفي لمنع الشاشة البيضاء في Chrome
         let printIframe = document.getElementById("pdf-print-iframe");
-        if (printIframe) {
-          printIframe.remove();
-        }
+        if (printIframe) printIframe.remove();
 
         printIframe = document.createElement("iframe");
         printIframe.id = "pdf-print-iframe";
-        // إخفاء الـ iframe تماماً عن المستخدم
         printIframe.style.position = "absolute";
         printIframe.style.width = "0px";
         printIframe.style.height = "0px";
@@ -316,7 +310,6 @@ function AccountScreen({ member, token }) {
         iframeDoc.write(htmlContent);
         iframeDoc.close();
 
-        // ننتظر قليلاً ليتمكن المتصفح من رندرة الـ HTML وتحميل الـ QR
         setTimeout(() => {
           printIframe.contentWindow.focus();
           printIframe.contentWindow.print();
@@ -333,8 +326,17 @@ function AccountScreen({ member, token }) {
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
   const lateMonths = debt > 0 ? Math.floor(debt / 2) : 0; 
   const lastPaidDate = activeMember?.last_paid_date ? new Date(activeMember.last_paid_date).toLocaleDateString('en-GB', { month: '2-digit', year: 'numeric' }) : "غير محدد";
-  const subscriptions = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
-  const totalPaid = subscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+  
+  // 💡 التعديل المحوري: فرز الاشتراكات تنازلياً (الأحدث أولاً) بشكل قطعي في الواجهة
+  const subscriptionsRaw = accountData?.subscriptions?.filter(s => s !== null && s.status === 'paid') || [];
+  const sortedSubscriptions = [...subscriptionsRaw].sort((a, b) => {
+    if (b.subscription_year !== a.subscription_year) {
+      return b.subscription_year - a.subscription_year;
+    }
+    return b.subscription_month - a.subscription_month;
+  });
+
+  const totalPaid = sortedSubscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -363,9 +365,10 @@ function AccountScreen({ member, token }) {
 
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>كشف الحساب التفصيلي (المدفوعات السابقة)</div>
-        {subscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
+        {sortedSubscriptions.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding: 20}}>لا توجد حركات سابقة لعرضها. بمجرد اعتماد إيصالك الأول، سيظهر هنا.</div> : (
           <div style={{display:"flex", flexDirection:"column", gap: 10, maxHeight:"300px", overflowY:"auto"}}>
-            {subscriptions.slice().reverse().map((r, i) => (
+            {/* 💡 استخدام المصفوفة المفروزة تنازلياً بشكل قطعي هنا */}
+            {sortedSubscriptions.map((r, i) => (
               <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center", padding:"10px", background:C.surf2, borderRadius: 10, border:`1px solid ${C.border}` }}>
                 <div>
                   <div style={{fontSize:12,fontWeight:600,color:C.text}}>تغطية اشتراك شهر {r.subscription_month} / {r.subscription_year}</div>
