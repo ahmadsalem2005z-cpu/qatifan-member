@@ -4,15 +4,8 @@ const G = `
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
   
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  
   html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
-  
-  body { 
-    direction: rtl; 
-    font-family: 'Tajawal', sans-serif; 
-    background: #0b0f1a; 
-    color: #e2e8f0; 
-  }
+  body { direction: rtl; font-family: 'Tajawal', sans-serif; background: #0b0f1a; color: #e2e8f0; }
   
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: #0b0f1a; }
@@ -21,7 +14,6 @@ const G = `
   @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .anim { animation: fadeUp .3s ease both; }
   
-  /* 💡 إصلاح مشكلة اللون الأبيض عند الإكمال التلقائي للمتصفح Chrome Autofill */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
@@ -32,9 +24,30 @@ const G = `
       font-family: 'Tajawal', sans-serif !important;
   }
 
+  /* 💡 هذا هو الكلاس السحري الجديد الذي يمنع الشاشة البيضاء */
+  .print-view {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    overflow-y: auto;
+    background: #fff;
+    color: #111827;
+    padding: 20px;
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+  }
+
+  /* 💡 إجبار المتصفح على الطباعة بشكل سليم */
   @media print {
     .no-print { display: none !important; }
-    body { background: white; color: black; }
+    body, html { background: white !important; color: black !important; }
+    main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    .print-view {
+      position: static !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
   }
 `;
 
@@ -93,7 +106,7 @@ function FundScreen({ token }) {
     fetchSummary();
   }, [token]);
 
-  if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
+  if (isLoading) return <div className="anim no-print" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري حساب ملخص الصندوق...</div>;
 
   const balance = summary?.balance ?? 0;
   const totalSubs = summary?.totalSubs ?? 0;
@@ -111,7 +124,7 @@ function FundScreen({ token }) {
   const currentActiveDonors = donorTab === "year" ? topDonorsYear : topDonorsAllTime;
 
   return (
-    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
       
       {(topDonorsYear.length > 0 || topDonorsAllTime.length > 0) && (
         <Card style={{borderTop:`3px solid ${C.gold}`, borderBottom:`1px solid ${C.border}`}}>
@@ -162,7 +175,7 @@ function FundScreen({ token }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>مؤشر الالتزام المالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون متأخرة</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون أو اشتراكات متأخرة</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -195,7 +208,6 @@ function AccountScreen({ member, token }) {
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
-  
   const [printData, setPrintData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -235,7 +247,7 @@ function AccountScreen({ member, token }) {
       if (res.ok) {
         const data = await res.json();
         setShowStatementModal(false);
-        setPrintData(data);
+        setPrintData(data); // 💡 عرض الشاشة المصححة
         setTimeout(() => window.print(), 500);
       } else {
         alert("حدث خطأ أثناء استخراج الكشف");
@@ -244,13 +256,13 @@ function AccountScreen({ member, token }) {
     setIsGenerating(false);
   };
 
-  if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
+  if (isLoading) return <div className="anim no-print" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
 
+  // 💡 هذه الشاشة محصنة ضد مشاكل الـ Fixed في الطباعة
   if (printData) {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${printData.member.phone_number}`;
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, overflowY: 'auto', background: '#fff', color: '#111827', padding: '20px', fontFamily: "'Tajawal', sans-serif", direction: 'rtl' }}>
-        
+      <div className="print-view">
         <div className="no-print" style={{display: 'flex', gap: 10, marginBottom: 20}}>
           <button onClick={() => setPrintData(null)} style={{padding: '8px 16px', background: '#e2e8f0', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', color: '#333'}}>🔙 العودة للحساب</button>
           <button onClick={() => window.print()} style={{padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold'}}>🖨️ طباعة الآن</button>
@@ -328,7 +340,7 @@ function AccountScreen({ member, token }) {
   const totalPaid = sortedSubscriptions.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
   return (
-    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
       
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
         <h2 style={{fontSize:18, color:C.text}}>حسابي الشخصي</h2>
@@ -426,7 +438,7 @@ function RequestScreen({ token }) {
 
   if (submitted) {
     return (
-      <div className="anim">
+      <div className="anim no-print">
         <Card style={{textAlign:"center",padding:40}}>
           <div style={{fontSize:48,marginBottom:16}}>✅</div>
           <div style={{fontSize:18,fontWeight:700,color:C.green,marginBottom:8}}>وصل طلبك بالسلامة</div>
@@ -438,7 +450,7 @@ function RequestScreen({ token }) {
   }
 
   return (
-    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>نوع الطلب</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -494,7 +506,7 @@ function AnnouncementsScreen({ token }) {
   const typeColors = { meeting: {bg:"#1d3557", border:"#3b82f6", icon:"📅"}, honor: {bg:"#2d2006", border:"#f59e0b", icon:"🏆"}, update: {bg:"#1e1040", border:"#a78bfa", icon:"📢"}, condolence: {bg:C.surf2, border:C.border, icon:"🕊️"} };
 
   return (
-    <div className="anim" style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div className="anim no-print" style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:14}}>📣 إعلانات العائلة الحية</div>
         {loading ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:20}}>⏳ جاري التحميل...</div> : announcements.length === 0 ? <div style={{fontSize:12, color:C.dim, textAlign:"center", padding:20}}>الساحة هادية.. ما في إعلانات هسا.</div> : (
@@ -593,7 +605,7 @@ function AuthScreen({ onLogin }) {
   };
 
   return (
-    <div className="anim" style={{minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"}}>
+    <div className="anim no-print" style={{minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"}}>
       <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
         <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
         <h2 style={{color:C.text, marginBottom:8, fontSize:22}}>صندوق عائلة قطيفان</h2>
@@ -652,7 +664,6 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
@@ -684,7 +695,6 @@ export default function App() {
     setToken(null); setMember(null);
   };
 
-  // 💡 تم وضع ملف الاستايلات <style> هنا لضمان تغطية شاشة الدخول والتطبيق بالكامل
   if (!token) {
     return (
       <>
@@ -711,7 +721,7 @@ export default function App() {
           <button onClick={handleLogout} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:8,padding:"4px 8px", cursor:"pointer",fontSize:11,color:C.muted,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>خروج</button>
         </header>
 
-        <main className="no-print" style={{flex:1,padding:"20px 16px 100px",maxWidth:600,margin:"0 auto",width:"100%"}}>
+        <main style={{flex:1,padding:"20px 16px 100px",maxWidth:600,margin:"0 auto",width:"100%"}}>
           <div key={screen}>{SCREENS[screen]}</div>
         </main>
 
