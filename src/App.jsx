@@ -2,14 +2,36 @@ import { useState, useRef, useEffect } from "react";
 
 const G = `
   @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{direction:rtl;font-family:'Tajawal',sans-serif;background:#0b0f1a;color:#e2e8f0}
-  ::-webkit-scrollbar{width:5px}
-  ::-webkit-scrollbar-track{background:#0b0f1a}
-  ::-webkit-scrollbar-thumb{background:#2a3a5c;border-radius:3px}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .anim{animation:fadeUp .3s ease both}
   
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+  
+  body { 
+    direction: rtl; 
+    font-family: 'Tajawal', sans-serif; 
+    background: #0b0f1a; 
+    color: #e2e8f0; 
+  }
+  
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: #0b0f1a; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 3px; }
+  
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .anim { animation: fadeUp .3s ease both; }
+  
+  /* 💡 إصلاح مشكلة اللون الأبيض عند الإكمال التلقائي للمتصفح Chrome Autofill */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px #1a2235 inset !important;
+      -webkit-text-fill-color: #e2e8f0 !important;
+      transition: background-color 5000s ease-in-out 0s;
+      font-family: 'Tajawal', sans-serif !important;
+  }
+
   @media print {
     .no-print { display: none !important; }
     body { background: white; color: black; }
@@ -174,7 +196,6 @@ function AccountScreen({ member, token }) {
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
   
-  // 💡 المتغير الجديد لتخزين بيانات الطباعة وعرضها بشكل كامل (Native React)
   const [printData, setPrintData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -202,7 +223,6 @@ function AccountScreen({ member, token }) {
     } catch (error) { alert("تعذر الاتصال بالسيرفر."); } finally { setIsUploading(false); }
   };
 
-  // 💡 الدالة الجديدة المحمية والتي تتجنب إطارات iframe المعطلة
   const generateStatementPDF = async () => {
     setIsGenerating(true);
     try {
@@ -215,9 +235,7 @@ function AccountScreen({ member, token }) {
       if (res.ok) {
         const data = await res.json();
         setShowStatementModal(false);
-        setPrintData(data); // نعرض شاشة الطباعة فوراً
-        
-        // استدعاء نافذة الطباعة بعد نصف ثانية لضمان رندرة الألوان
+        setPrintData(data);
         setTimeout(() => window.print(), 500);
       } else {
         alert("حدث خطأ أثناء استخراج الكشف");
@@ -228,7 +246,6 @@ function AccountScreen({ member, token }) {
 
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
 
-  // 🖨️ شاشة الطباعة المباشرة والكالمة (تغطي التطبيق) 🖨️
   if (printData) {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${printData.member.phone_number}`;
     return (
@@ -635,6 +652,7 @@ function AuthScreen({ onLogin }) {
   );
 }
 
+// ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
@@ -666,7 +684,15 @@ export default function App() {
     setToken(null); setMember(null);
   };
 
-  if (!token) return <AuthScreen onLogin={handleLoginSuccess} />;
+  // 💡 تم وضع ملف الاستايلات <style> هنا لضمان تغطية شاشة الدخول والتطبيق بالكامل
+  if (!token) {
+    return (
+      <>
+        <style>{G}</style>
+        <AuthScreen onLogin={handleLoginSuccess} />
+      </>
+    );
+  }
 
   return (
     <>
