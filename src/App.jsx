@@ -9,6 +9,11 @@ const G = `
   ::-webkit-scrollbar-thumb{background:#2a3a5c;border-radius:3px}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .anim{animation:fadeUp .3s ease both}
+  
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white; color: black; }
+  }
 `;
 
 const C = {
@@ -135,7 +140,7 @@ function FundScreen({ token }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>مؤشر الالتزام المالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون أو اشتراكات متأخرة</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون متأخرة</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -168,6 +173,9 @@ function AccountScreen({ member, token }) {
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [stmtStart, setStmtStart] = useState("");
   const [stmtEnd, setStmtEnd] = useState("");
+  
+  // 💡 المتغير الجديد لتخزين بيانات الطباعة وعرضها بشكل كامل (Native React)
+  const [printData, setPrintData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
@@ -194,6 +202,7 @@ function AccountScreen({ member, token }) {
     } catch (error) { alert("تعذر الاتصال بالسيرفر."); } finally { setIsUploading(false); }
   };
 
+  // 💡 الدالة الجديدة المحمية والتي تتجنب إطارات iframe المعطلة
   const generateStatementPDF = async () => {
     setIsGenerating(true);
     try {
@@ -206,106 +215,87 @@ function AccountScreen({ member, token }) {
       if (res.ok) {
         const data = await res.json();
         setShowStatementModal(false);
+        setPrintData(data); // نعرض شاشة الطباعة فوراً
         
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
-        const htmlContent = `
-          <html dir="rtl">
-            <head>
-              <title>كشف حساب العضو - ${data.member.full_name}</title>
-              <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-              <style>
-                body { font-family: 'Tajawal', sans-serif; padding: 40px; color: #111827; background: #fff; }
-                .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #334155; padding-bottom: 20px; margin-bottom: 30px; }
-                .title-section h1 { margin: 0; font-size: 28px; color: #1e2d44; }
-                .title-section h2 { margin: 5px 0 0; color: #475569; font-size: 18px; }
-                .title-section p { font-size: 12px; color: #94a3b8; margin-top: 8px; }
-                .summary-box { display: flex; gap: 30px; margin-bottom: 30px; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                .summary-item strong { color: #475569; display: block; margin-bottom: 5px; font-size: 14px; }
-                .summary-item span { font-size: 16px; font-weight: bold; color: #0f172a; }
-                .status-clear { border: 2px dashed #10b981; background: #ecfdf5; padding: 30px; text-align: center; border-radius: 12px; margin-bottom: 40px; }
-                .status-clear h2 { color: #047857; margin: 0 0 10px; font-size: 24px; }
-                .status-debt { border: 2px dashed #ef4444; background: #fef2f2; padding: 20px; text-align: center; border-radius: 12px; margin-bottom: 40px; }
-                .status-debt h2 { color: #b91c1c; margin: 0 0 10px; font-size: 24px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-                th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
-                th { background: #f1f5f9; color: #334155; font-size: 14px; }
-                td { font-size: 14px; }
-                .footer { text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
-              </style>
-            </head>
-            <body>
-              <div class="header">
-                <div class="title-section">
-                  <h1>صندوق عائلة قطيفان</h1>
-                  <h2>كشف حساب العضو: ${data.member.full_name}</h2>
-                  <p>تاريخ الإصدار: ${new Date().toLocaleString('ar-JO')}</p>
-                </div>
-                <img src="${qrCodeUrl}" alt="QR Code" width="100" height="100" />
-              </div>
-
-              <div class="summary-box">
-                <div class="summary-item"><strong>رقم الجوال:</strong> <span>${data.member.phone_number}</span></div>
-                <div class="summary-item"><strong>الفرع/الفخذ:</strong> <span>${data.member.family_branch}</span></div>
-                <div class="summary-item"><strong>إجمالي المدفوعات بالفترة:</strong> <span style="color:#10b981;">${data.total_paid_in_period} د.أ</span></div>
-              </div>
-
-              ${parseFloat(data.member.total_debt) <= 0 
-                ? `<div class="status-clear">
-                    <h2>✅ براءة ذمة تبيّض الوجه</h2>
-                    <p style="color:#065f46; margin:0; font-size:15px;">هالشهادة بتثبت إنو ابن العم المذكور فوق مسدد كل اللي عليه لصندوق العيلة ومبيّض الوجه. يخلف عليك وبارك الله بمالك.</p>
-                   </div>`
-                : `<div class="status-debt">
-                    <h2>⚠️ ذمم مالية متأخرة</h2>
-                    <p style="color:#991b1b; margin:0; font-size:15px;">يا قرابتنا، معلّق بذمتك للصندوق التزامات بقيمة <strong>${data.member.total_debt} دينار أردني</strong>، همتك بالسداد يا النشمي تانظل ساندين بعض.</p>
-                   </div>`
-              }
-
-              <h3 style="color:#1e2d44; margin-bottom:15px;">سجل الحركات المعتمدة (خلال الفترة المحددة)</h3>
-              <table>
-                <thead>
-                  <tr><th>التاريخ</th><th>التغطية</th><th>المبلغ (د.أ)</th></tr>
-                </thead>
-                <tbody>
-                  ${data.payments.length === 0 
-                    ? `<tr><td colspan="3" style="text-align:center; color:#64748b;">لا توجد دفعات معتمدة في هذه الفترة</td></tr>` 
-                    : data.payments.map(p => `<tr><td>${new Date(p.payment_date).toLocaleDateString('en-GB')}</td><td>تغطية شهر ${p.subscription_month} / ${p.subscription_year}</td><td style="font-weight:bold; color:#10b981;">${p.amount} د.أ</td></tr>`).join('')
-                  }
-                </tbody>
-              </table>
-
-              <div class="footer">
-                هذا الكشف مُصدَر إلكترونياً ولا يحتاج لختم، وتقدر تتأكد من صحته لو مسحت الرمز (QR) المرفق.
-              </div>
-            </body>
-          </html>
-        `;
-
-        let printIframe = document.getElementById("pdf-print-iframe");
-        if (printIframe) printIframe.remove();
-        printIframe = document.createElement("iframe");
-        printIframe.id = "pdf-print-iframe";
-        printIframe.style.position = "absolute";
-        printIframe.style.width = "0px";
-        printIframe.style.height = "0px";
-        printIframe.style.border = "none";
-        printIframe.style.visibility = "hidden";
-        
-        document.body.appendChild(printIframe);
-        const iframeDoc = printIframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(htmlContent);
-        iframeDoc.close();
-
-        setTimeout(() => {
-          printIframe.contentWindow.focus();
-          printIframe.contentWindow.print();
-        }, 800);
-      } else alert("حدث خطأ أثناء استخراج الكشف");
+        // استدعاء نافذة الطباعة بعد نصف ثانية لضمان رندرة الألوان
+        setTimeout(() => window.print(), 500);
+      } else {
+        alert("حدث خطأ أثناء استخراج الكشف");
+      }
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
     setIsGenerating(false);
   };
 
   if (isLoading) return <div className="anim" style={{textAlign:"center", padding:40, color:C.dim}}>⏳ جاري جلب بيانات حسابك...</div>;
+
+  // 🖨️ شاشة الطباعة المباشرة والكالمة (تغطي التطبيق) 🖨️
+  if (printData) {
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${printData.member.phone_number}`;
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, overflowY: 'auto', background: '#fff', color: '#111827', padding: '20px', fontFamily: "'Tajawal', sans-serif", direction: 'rtl' }}>
+        
+        <div className="no-print" style={{display: 'flex', gap: 10, marginBottom: 20}}>
+          <button onClick={() => setPrintData(null)} style={{padding: '8px 16px', background: '#e2e8f0', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', color: '#333'}}>🔙 العودة للحساب</button>
+          <button onClick={() => window.print()} style={{padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold'}}>🖨️ طباعة الآن</button>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #334155', paddingBottom: 20, marginBottom: 30 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24, color: '#1e2d44' }}>صندوق عائلة قطيفان</h1>
+            <h2 style={{ margin: '5px 0 0', color: '#475569', fontSize: 16 }}>كشف حساب العضو: {printData.member.full_name}</h2>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>تاريخ الإصدار: {new Date().toLocaleString('ar-JO')}</p>
+          </div>
+          <img src={qrCodeUrl} alt="QR Code" width="80" height="80" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 15, marginBottom: 30, padding: 15, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+          <div><strong style={{ color: '#475569', display: 'block', marginBottom: 5, fontSize: 12 }}>رقم الجوال:</strong> <span style={{ fontSize: 14, fontWeight: 'bold' }}>{printData.member.phone_number}</span></div>
+          <div><strong style={{ color: '#475569', display: 'block', marginBottom: 5, fontSize: 12 }}>الفرع/الفخذ:</strong> <span style={{ fontSize: 14, fontWeight: 'bold' }}>{printData.member.family_branch}</span></div>
+          <div><strong style={{ color: '#475569', display: 'block', marginBottom: 5, fontSize: 12 }}>المدفوعات بالفترة:</strong> <span style={{ color: '#10b981', fontSize: 14, fontWeight: 'bold' }}>{printData.total_paid_in_period} د.أ</span></div>
+        </div>
+
+        {parseFloat(printData.member.total_debt) <= 0 ? (
+          <div style={{ border: '2px dashed #10b981', background: '#ecfdf5', padding: 20, textAlign: 'center', borderRadius: 12, marginBottom: 30 }}>
+            <h2 style={{ color: '#047857', margin: '0 0 10px', fontSize: 20 }}>✅ براءة ذمة تبيّض الوجه</h2>
+            <p style={{ color: '#065f46', margin: 0, fontSize: 14 }}>هالشهادة بتثبت إنو ابن العم المذكور فوق مسدد كل اللي عليه لصندوق العيلة ومبيّض الوجه. يخلف عليك وبارك الله بمالك.</p>
+          </div>
+        ) : (
+          <div style={{ border: '2px dashed #ef4444', background: '#fef2f2', padding: 20, textAlign: 'center', borderRadius: 12, marginBottom: 30 }}>
+            <h2 style={{ color: '#b91c1c', margin: '0 0 10px', fontSize: 20 }}>⚠️ ذمم مالية متأخرة</h2>
+            <p style={{ color: '#991b1b', margin: 0, fontSize: 14 }}>يا قرابتنا، معلّق بذمتك للصندوق التزامات بقيمة <strong>{printData.member.total_debt} دينار أردني</strong>، همتك بالسداد يا النشمي تانظل ساندين بعض.</p>
+          </div>
+        )}
+
+        <h3 style={{ color: '#1e2d44', marginBottom: 15, fontSize: 16 }}>سجل الحركات المعتمدة (خلال الفترة المحددة)</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 40 }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', background: '#f1f5f9', color: '#334155', fontSize: 13 }}>التاريخ</th>
+              <th style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', background: '#f1f5f9', color: '#334155', fontSize: 13 }}>التغطية</th>
+              <th style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', background: '#f1f5f9', color: '#334155', fontSize: 13 }}>المبلغ (د.أ)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {printData.payments.length === 0 ? (
+              <tr><td colSpan="3" style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'center', color: '#64748b', fontSize: 13 }}>لا توجد دفعات معتمدة في هذه الفترة</td></tr>
+            ) : (
+              printData.payments.map((p, idx) => (
+                <tr key={idx}>
+                  <td style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', fontSize: 13 }}>{new Date(p.payment_date).toLocaleDateString('en-GB')}</td>
+                  <td style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', fontSize: 13 }}>تغطية شهر {p.subscription_month} / {p.subscription_year}</td>
+                  <td style={{ border: '1px solid #cbd5e1', padding: 10, textAlign: 'right', fontWeight: 'bold', color: '#10b981', fontSize: 13 }}>{p.amount} د.أ</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: 15 }}>
+          هذا الكشف مُصدَر إلكترونياً ولا يحتاج لختم، وتقدر تتأكد من صحته لو مسحت الرمز (QR) المرفق.
+        </div>
+      </div>
+    );
+  }
 
   const activeMember = accountData || member;
   const debt = activeMember?.total_debt ? parseFloat(activeMember.total_debt) : 0;
@@ -365,7 +355,6 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
-      {/* 💡 أزلنا القوائم المنسدلة نهائياً هنا */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>ارفع صورة الإيصال البنكي هان عشان نوثق الدفعة. النظام لحاله بحسب الأشهر وبسدد المتأخرات أو بمدد اشتراكك تلقائياً بناءً على المبلغ المودع، ريح راسك.</p>
@@ -375,6 +364,21 @@ function AccountScreen({ member, token }) {
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال، عاشوا" : "📤 إرفاق إيصال التحويل"}
         </Btn>
       </Card>
+
+      {showStatementModal && (
+        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20}}>
+          <Card style={{width:"100%", maxWidth:360}}>
+            <h3 style={{marginBottom:8, color:C.text}}>إصدار كشف حساب (PDF)</h3>
+            <p style={{fontSize:12, color:C.muted, marginBottom:20}}>رح ندمج شهادة "براءة ذمة" بالتقرير إذا كان رصيدك مُسدّد بالكامل ومبيض الوجه.</p>
+            <Input label="من تاريخ (اختياري)" type="date" value={stmtStart} onChange={setStmtStart} />
+            <Input label="إلى تاريخ (اختياري)" type="date" value={stmtEnd} onChange={setStmtEnd} />
+            <div style={{display:"flex", gap:10, marginTop:10}}>
+              <Btn style={{flex:1}} variant="primary" onClick={generateStatementPDF}>{isGenerating ? "⏳ جاري المعالجة..." : "إصدار وطباعة"}</Btn>
+              <Btn style={{flex:1}} variant="ghost" onClick={() => setShowStatementModal(false)}>إلغاء</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -573,7 +577,6 @@ function AuthScreen({ onLogin }) {
 
   return (
     <div className="anim" style={{minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, direction:"rtl"}}>
-      <style>{G}</style>
       <Card style={{width:"100%", maxWidth:400, textAlign:"center", padding:"30px 20px"}}>
         <div style={{fontSize:48, marginBottom:12}}>🛡️</div>
         <h2 style={{color:C.text, marginBottom:8, fontSize:22}}>صندوق عائلة قطيفان</h2>
@@ -669,7 +672,7 @@ export default function App() {
     <>
       <style>{G}</style>
       <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",direction:"rtl",fontFamily:"'Tajawal',sans-serif"}}>
-        <header style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+        <header className="no-print" style={{background:C.surf,borderBottom:`1px solid ${C.border}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:38,height:38,borderRadius:50,background:C.accentSoft,border:`2px solid ${C.accent}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.accent}}>
               {member?.full_name ? member.full_name.split(" ").map(n=>n[0]).join("").substring(0,2) : "عق"}
@@ -682,11 +685,11 @@ export default function App() {
           <button onClick={handleLogout} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:8,padding:"4px 8px", cursor:"pointer",fontSize:11,color:C.muted,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>خروج</button>
         </header>
 
-        <main style={{flex:1,padding:"20px 16px 100px",maxWidth:600,margin:"0 auto",width:"100%"}}>
+        <main className="no-print" style={{flex:1,padding:"20px 16px 100px",maxWidth:600,margin:"0 auto",width:"100%"}}>
           <div key={screen}>{SCREENS[screen]}</div>
         </main>
 
-        <nav style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
+        <nav className="no-print" style={{position:"fixed",bottom:0,right:0,left:0,background:C.surf,borderTop:`1px solid ${C.border}`,display:"flex",padding:"8px 0 12px",justifyContent:"space-around",zIndex:50}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setScreen(n.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",color: screen===n.id?C.accent:C.muted,padding:"4px 12px",borderRadius:10,transition:"all .15s",minWidth:60}}>
               <span style={{fontSize:20}}>{n.icon}</span>
