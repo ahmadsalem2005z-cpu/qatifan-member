@@ -135,7 +135,7 @@ function FundScreen({ token }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>مؤشر الالتزام المالي</div>
-            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون متأخرة</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{paidCount} من {expectedCount} أعضاء ليس عليهم ديون أو اشتراكات متأخرة</div>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.green,fontFamily:"'IBM Plex Mono',monospace"}}>{paidPct}%</div>
         </div>
@@ -187,7 +187,6 @@ function AccountScreen({ member, token }) {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('receipt', file);
-    // تم إزالة إضافة الشهر والسنة يدوياً من هنا
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'https://qatifan-fund-production.up.railway.app';
       const response = await fetch(`${apiUrl}/api/upload-receipt`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
@@ -209,7 +208,6 @@ function AccountScreen({ member, token }) {
         setShowStatementModal(false);
         
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
-        
         const htmlContent = `
           <html dir="rtl">
             <head>
@@ -367,6 +365,7 @@ function AccountScreen({ member, token }) {
         )}
       </Card>
 
+      {/* 💡 أزلنا القوائم المنسدلة نهائياً هنا */}
       <Card>
         <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:12}}>إرفاق إيصال التحويل</div>
         <p style={{fontSize:11,color:C.dim,marginBottom:16,lineHeight:1.6}}>ارفع صورة الإيصال البنكي هان عشان نوثق الدفعة. النظام لحاله بحسب الأشهر وبسدد المتأخرات أو بمدد اشتراكك تلقائياً بناءً على المبلغ المودع، ريح راسك.</p>
@@ -376,21 +375,6 @@ function AccountScreen({ member, token }) {
           {isUploading ? "⏳ جاري إرسال الإيصال..." : uploadSuccess ? "✅ تم استلام الإيصال، عاشوا" : "📤 إرفاق إيصال التحويل"}
         </Btn>
       </Card>
-
-      {showStatementModal && (
-        <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20}}>
-          <Card style={{width:"100%", maxWidth:360}}>
-            <h3 style={{marginBottom:8, color:C.text}}>إصدار كشف حساب (PDF)</h3>
-            <p style={{fontSize:12, color:C.muted, marginBottom:20}}>رح ندمج شهادة "براءة ذمة" بالتقرير إذا كان رصيدك مُسدّد بالكامل ومبيض الوجه.</p>
-            <Input label="من تاريخ (اختياري)" type="date" value={stmtStart} onChange={setStmtStart} />
-            <Input label="إلى تاريخ (اختياري)" type="date" value={stmtEnd} onChange={setStmtEnd} />
-            <div style={{display:"flex", gap:10, marginTop:10}}>
-              <Btn style={{flex:1}} variant="primary" onClick={generateStatementPDF}>{isGenerating ? "⏳ جاري المعالجة..." : "إصدار وطباعة"}</Btn>
-              <Btn style={{flex:1}} variant="ghost" onClick={() => setShowStatementModal(false)}>إلغاء</Btn>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
@@ -648,7 +632,6 @@ function AuthScreen({ onLogin }) {
   );
 }
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("qatifan_token"));
   const [member, setMember] = useState(JSON.parse(localStorage.getItem("qatifan_member")) || null);
