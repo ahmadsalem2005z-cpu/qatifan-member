@@ -218,13 +218,6 @@ function AccountScreen({ member, token }) {
         const data = await res.json();
         setShowStatementModal(false);
         
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-          alert("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض كشف الحساب.");
-          setIsGenerating(false);
-          return;
-        }
-
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=QatifanClearance-${data.member.phone_number}`;
         
         const htmlContent = `
@@ -300,17 +293,34 @@ function AccountScreen({ member, token }) {
             </body>
           </html>
         `;
+
+        // 💡 الحل الجذري النهائي باستخدام Iframe مخفي لمنع الشاشة البيضاء في Chrome
+        let printIframe = document.getElementById("pdf-print-iframe");
+        if (printIframe) {
+          printIframe.remove();
+        }
+
+        printIframe = document.createElement("iframe");
+        printIframe.id = "pdf-print-iframe";
+        // إخفاء الـ iframe تماماً عن المستخدم
+        printIframe.style.position = "absolute";
+        printIframe.style.width = "0px";
+        printIframe.style.height = "0px";
+        printIframe.style.border = "none";
+        printIframe.style.visibility = "hidden";
         
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        
-        // إعطاء المتصفح وقتاً لتحميل صورة الـ QR Code قبل فتح نافذة الطباعة
-        // تم إزالة أمر الإغلاق التلقائي لحل مشكلة الشاشة البيضاء في كروم
+        document.body.appendChild(printIframe);
+
+        const iframeDoc = printIframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
+
+        // ننتظر قليلاً ليتمكن المتصفح من رندرة الـ HTML وتحميل الـ QR
         setTimeout(() => {
-          printWindow.focus();
-          printWindow.print();
-        }, 1000);
+          printIframe.contentWindow.focus();
+          printIframe.contentWindow.print();
+        }, 800);
 
       } else alert("حدث خطأ أثناء استخراج الكشف");
     } catch (err) { alert("تعذر الاتصال بالسيرفر"); }
